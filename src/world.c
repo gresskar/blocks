@@ -1,0 +1,843 @@
+#include <SDL3/SDL_error.h>
+#include <SDL3/SDL_gpu.h>
+#include <SDL3/SDL_log.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <threads.h>
+#include "block.h"
+#include "camera.h"
+#include "helpers.h"
+#include "world.h"
+
+#define MAX_JOBS 1000
+#define MAX_WORKERS 4
+
+typedef enum 
+{
+    JOB_TYPE_QUIT,
+    JOB_TYPE_LOAD,
+    JOB_TYPE_MESH,
+} job_type_t;
+
+typedef struct
+{
+    job_type_t type;
+    tag_t tag;
+    int32_t x;
+    int32_t y;
+    int32_t z;
+} job_t;
+
+typedef struct
+{
+    thrd_t thrd;
+    mtx_t mtx;
+    cnd_t cnd;
+    const job_t* job;
+    uint8_t lights[3][3][3][CHUNK_X][CHUNK_Y][CHUNK_Z];
+    SDL_GPUTransferBuffer* tbo;
+    uint32_t size;
+} worker_t;
+
+static worker_t workers[MAX_WORKERS];
+static ring_t jobs;
+static group_t* groups[WORLD_X][WORLD_Z];
+static int32_t wx;
+static int32_t wy;
+static int32_t wz;
+static SDL_GPUDevice* device;
+static SDL_GPUBuffer* ibo;
+static uint32_t capacity;
+static int presort[WORLD_Y][WORLD_CHUNKS][3];
+static int sort[WORLD_GROUPS][2];
+
+static void load(worker_t* worker)
+{
+    const int32_t x = worker->job->x;
+    const int32_t z = worker->job->z;
+    group_t* group = world_get_group(x, z);
+    assert(!group->loaded);
+    noise_generate(group, x, z);
+    group->loaded = true;
+}
+
+static uint32_t fill(
+    const chunk_t* chunk,
+    const chunk_t* neighbors[DIRECTION_3],
+    const uint8_t lights[CHUNK_X][CHUNK_Y][CHUNK_Z],
+    uint32_t* data,
+    const uint32_t capacity)
+{
+    assert(chunk);
+    assert(!chunk->empty);
+    assert(!chunk->renderable);
+    uint32_t size = 0;
+    for (int x = 0; x < CHUNK_X; x++)
+    for (int y = 0; y < CHUNK_Y; y++)
+    for (int z = 0; z < CHUNK_Z; z++)
+    {
+        const block_t a = chunk->blocks[x][y][z];
+        if (a == BLOCK_EMPTY)
+        {
+            continue;
+        }
+        for (direction_t direction = 0; direction < DIRECTION_3; direction++)
+        {
+            if (y == 0 && direction != DIRECTION_U)
+            {
+                continue;
+            }
+            block_t b = BLOCK_EMPTY;
+            int c = x + directions[direction][0];
+            int d = y + directions[direction][1];
+            int e = z + directions[direction][2];
+            if (in_chunk(c, d, e))
+            {
+                b = chunk->blocks[c][d][e];
+            }
+            else if (neighbors[direction])
+            {
+                c = (c + CHUNK_X) % CHUNK_X;
+                d = (d + CHUNK_Y) % CHUNK_Y;
+                e = (e + CHUNK_Z) % CHUNK_Z;
+                b = neighbors[direction]->blocks[c][d][e];
+            }
+            if (!block_visible(a, b) || ++size > capacity)
+            {
+                continue;
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                data[(size * 4) - 4 + i] = block_get_voxel(
+                    a,
+                    x,
+                    y,
+                    z,
+                    direction,
+                    lights[x][y][z],
+                    i);
+            }
+        }
+    }
+    return size;
+}
+
+static void mesh(worker_t* worker)
+{
+    const int32_t x = worker->job->x;
+    const int32_t y = worker->job->y;
+    const int32_t z = worker->job->z;
+    chunk_t* chunk = world_get_chunk(x, y, z);
+    assert(!chunk->renderable);
+    assert(!chunk->empty);
+    chunk_t* neighbors[DIRECTION_3];
+    world_get_chunk_neighbors(x, y, z, neighbors);
+    void* data = worker->tbo;
+    if (data)
+    {
+        data = SDL_MapGPUTransferBuffer(device, worker->tbo, true);
+        if (!data)
+        {
+            SDL_Log("Failed to map worker transfer buffer: %s", SDL_GetError());
+            return;
+        }
+    }
+    const void* lights = worker->lights[1][1][1];
+    chunk->size = fill(chunk, neighbors, lights, data, worker->size);
+    if (data)
+    {
+        SDL_UnmapGPUTransferBuffer(device, worker->tbo);
+    }
+    if (!chunk->size)
+    {
+        return;
+    }
+    if (chunk->size > worker->size)
+    {
+        if (worker->tbo)
+        {
+            SDL_ReleaseGPUTransferBuffer(device, worker->tbo);
+            worker->size = 0;
+        }
+        SDL_GPUTransferBufferCreateInfo tbci = {0};
+        tbci.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+        tbci.size = chunk->size * 16;
+        worker->tbo = SDL_CreateGPUTransferBuffer(device, &tbci);
+        if (!worker->tbo)
+        {
+            SDL_Log("Failed to create worker transfer buffer: %s", SDL_GetError());
+            return;
+        }
+        worker->size = chunk->size;
+        data = SDL_MapGPUTransferBuffer(device, worker->tbo, true);
+        if (!data)
+        {
+            SDL_Log("Failed to map worker transfer buffer: %s", SDL_GetError());
+            return;
+        }
+        chunk->size = fill(chunk, neighbors, lights, data, worker->size);
+        SDL_UnmapGPUTransferBuffer(device, worker->tbo);
+    }
+    if (chunk->size > chunk->capacity)
+    {
+        if (chunk->vbo)
+        {
+            SDL_ReleaseGPUBuffer(device, chunk->vbo);
+            chunk->size = 0;
+        }
+        SDL_GPUBufferCreateInfo bci = {0};
+        bci.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
+        bci.size = chunk->size * 16;
+        chunk->vbo = SDL_CreateGPUBuffer(device, &bci);
+        if (!chunk->vbo)
+        {
+            SDL_Log("Failed to create chunk buffer: %s", SDL_GetError());
+            return;
+        }
+        chunk->capacity = chunk->size;
+    }
+    SDL_GPUCommandBuffer* commands = SDL_AcquireGPUCommandBuffer(device);
+    if (!commands)
+    {
+        SDL_Log("Failed to acquire worker command buffer: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(commands);
+    if (!pass)
+    {
+        SDL_Log("Failed to begin worker copy pass: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUTransferBufferLocation tbl = {0};
+    tbl.transfer_buffer = worker->tbo;
+    SDL_GPUBufferRegion region = {0};
+    region.size = chunk->size * 16;
+    region.buffer = chunk->vbo;
+    SDL_UploadToGPUBuffer(pass, &tbl, &region, 1);
+    SDL_EndGPUCopyPass(pass);
+    SDL_SubmitGPUCommandBuffer(commands);
+    chunk->renderable = 1;
+}
+
+static int func(void* args)
+{
+    int loop = 1;
+    worker_t* worker = args;
+    while (loop)
+    {
+        mtx_lock(&worker->mtx);
+        while (!worker->job)
+        {
+            cnd_wait(&worker->cnd, &worker->mtx);
+        }
+        switch (worker->job->type)
+        {
+        case JOB_TYPE_QUIT:
+            loop = 0;
+            break;
+        case JOB_TYPE_LOAD:
+            load(worker);
+            break;
+        case JOB_TYPE_MESH:
+            mesh(worker);
+            break;
+        default:
+            assert(0);
+        }
+        worker->job = NULL;
+        cnd_signal(&worker->cnd);
+        mtx_unlock(&worker->mtx);
+    }
+    return 0;
+}
+
+bool worker_init()
+{
+    for (int i = 0; i < MAX_WORKERS; i++)
+    {
+        worker_t* worker = &workers[i];
+        worker->job = NULL;
+        worker->tbo = NULL;
+        worker->size = 0;
+        if (mtx_init(&worker->mtx, mtx_plain) != thrd_success)
+        {
+            SDL_Log("Failed to create worker mutex");
+            return false;
+        }
+        if (cnd_init(&worker->cnd) != thrd_success)
+        {
+            SDL_Log("Failed to create worker condition variable");
+            return false;
+        }
+        if (thrd_create(&worker->thrd, func, worker) != thrd_success)
+        {
+            SDL_Log("Failed to create worker thread");
+            return false;
+        }
+    }
+    if (!ring_init(&jobs, MAX_JOBS, sizeof(job_t)))
+    {
+        SDL_Log("Failed to allocate scheduler ring");
+        return false;
+    }
+    return true;
+}
+
+static void work(
+    worker_t* worker,
+    const job_t* job)
+{
+    assert(worker);
+    assert(job);
+    mtx_lock(&worker->mtx);
+    assert(!worker->job);
+    worker->job = job;
+    cnd_signal(&worker->cnd);
+    mtx_unlock(&worker->mtx);
+}
+
+void worker_free()
+{
+    job_t job;
+    job.type = JOB_TYPE_QUIT;
+    for (int i = 0; i < MAX_WORKERS; i++)
+    {
+        worker_t* worker = &workers[i];
+        job.type = JOB_TYPE_QUIT;
+        work(worker, &job);
+    }
+    for (int i = 0; i < MAX_WORKERS; i++)
+    {
+        worker_t* worker = &workers[i];
+        thrd_join(worker->thrd, NULL);
+        if (worker->tbo)
+        {
+            SDL_ReleaseGPUTransferBuffer(device, worker->tbo);
+            worker->tbo = NULL;
+        }
+    }
+    ring_free(&jobs);
+}
+
+void worker_load(
+    group_t* group,
+    const int32_t x,
+    const int32_t z)
+{
+    assert(group);
+    assert(!group->neighbors);
+    assert(!group->loaded);
+    assert(world_in(x, 0, z));
+    group_t* neighbors[DIRECTION_2];
+    world_get_group_neighbors(x, z, neighbors);
+    for (direction_t dir = 0; dir < DIRECTION_2; dir++)
+    {
+        const group_t* neighbor = neighbors[dir];
+        group->neighbors += neighbor && neighbor->loaded;
+    }
+    tag_invalidate(&group->tag);
+    job_t job;
+    job.type = JOB_TYPE_LOAD;
+    job.tag = group->tag;
+    job.x = x;
+    job.y = 0;
+    job.z = z;
+    if (!ring_add(&jobs, &job, false))
+    {
+        SDL_Log("Failed to add load job");
+    }
+}
+
+void worker_mesh(
+    group_t* group,
+    const int32_t x,
+    const int32_t z)
+{
+    assert(group);
+    assert(group->neighbors >= DIRECTION_2);
+    assert(group->loaded);
+    assert(world_in(x, 0, z));
+    if (world_on_border(x, 1, z))
+    {
+        return;
+    }
+    for (int y = 0; y < GROUP_CHUNKS; y++)
+    {
+        chunk_t* chunk = &group->chunks[y];
+        if (chunk->empty || chunk->renderable)
+        {
+            continue;
+        }
+        tag_invalidate(&chunk->tag);
+        job_t job;
+        job.type = JOB_TYPE_MESH;
+        job.tag = chunk->tag;
+        job.x = x;
+        job.y = y;
+        job.z = z;
+        if (!ring_add(&jobs, &job, true))
+        {
+            SDL_Log("Failed to add mesh job");
+            break;
+        }
+    }
+}
+
+static bool should_work(const job_t* job)
+{
+    assert(job);
+    const int32_t x = job->x;
+    const int32_t y = job->y;
+    const int32_t z = job->z;
+    if (!world_in(x, y, z))
+    {
+        return false;
+    }
+    const group_t* group = world_get_group(x, z);
+    const chunk_t* chunk = &group->chunks[y];
+    switch (job->type)
+    {
+    case JOB_TYPE_LOAD:
+        return tag_same(job->tag, group->tag);
+    case JOB_TYPE_MESH:
+        return tag_same(job->tag, chunk->tag) && !world_on_border(x, 1, z);
+    }
+    assert(0);
+    return false;
+}
+
+static void post_mesh(
+    group_t* group,
+    const int32_t x,
+    const int32_t z)
+{
+    assert(group);
+    group_t* neighbors[DIRECTION_2];
+    world_get_group_neighbors(x, z, neighbors);
+    int i = 0;
+    for (direction_t direction = 0; direction < DIRECTION_2; direction++)
+    {
+        group_t* neighbor = neighbors[direction];
+        if (!neighbor)
+        {
+            continue;
+        }
+        neighbor->neighbors++;
+        if (!neighbor->loaded)
+        {
+            continue;
+        }
+        i++;
+        if (neighbor->neighbors < DIRECTION_2)
+        {
+            continue;
+        }
+        const int32_t a = x + directions[direction][0];
+        const int32_t b = z + directions[direction][2];
+        worker_mesh(neighbor, a, b);
+    }
+    if (i >= DIRECTION_2)
+    {
+        worker_mesh(group, x, z);
+    }
+}
+
+uint32_t worker_update()
+{
+    uint32_t load;
+    job_t data[MAX_WORKERS];
+    uint32_t buffer = 0;
+    for (load = 0; load < MAX_WORKERS;)
+    {
+        if (!ring_remove(&jobs, &data[load]))
+        {
+            break;
+        }
+        if (!should_work(&data[load]))
+        {
+            continue;
+        }
+        load++;
+    }
+    for (int i = 0; i < load; i++)
+    {
+        work(&workers[i], &data[i]);
+    }
+    for (int i = 0; i < MAX_WORKERS; i++)
+    {
+        worker_t* worker = &workers[i];
+        mtx_lock(&worker->mtx);
+        while (worker->job)
+        {
+            cnd_wait(&worker->cnd, &worker->mtx);
+        }
+        mtx_unlock(&worker->mtx);
+    }
+    for (int i = 0; i < load; i++)
+    {
+        const job_t* job = &data[i];
+        group_t* group = world_get_group(job->x, job->z);
+        switch (job->type)
+        {
+        case JOB_TYPE_LOAD:
+            post_mesh(group, job->x, job->z);
+            break;
+        case JOB_TYPE_MESH:
+            const chunk_t* chunk = world_get_chunk(job->x, job->y, job->z);
+            if (buffer < chunk->size)
+            {
+                buffer = chunk->size;
+            }
+            break;
+        default:
+            assert(0);
+        }
+    }
+    return buffer;
+}
+
+bool world_init(void* handle)
+{
+    assert(handle);
+    device = handle;
+    wx = INT32_MAX;
+    wy = INT32_MAX;
+    wz = INT32_MAX;
+    for (int i = 0; i < WORLD_Y; i++)
+    {
+        int j = 0;
+        for (int x = 0; x < WORLD_X; x++)
+        for (int y = 0; y < WORLD_Y; y++)
+        for (int z = 0; z < WORLD_Z; z++)
+        {
+            presort[i][j][0] = x;
+            presort[i][j][1] = y;
+            presort[i][j][2] = z;
+            j++;
+        }
+        sort_3d(WORLD_X / 2, i, WORLD_Z / 2, presort[i], WORLD_CHUNKS, true);
+    }
+    for (int x = 0; x < WORLD_X; x++)
+    for (int z = 0; z < WORLD_Z; z++)
+    {
+        group_t* group = malloc(sizeof(group_t));
+        if (!group)
+        {
+            SDL_Log("Failed to allocate group");
+            return false;
+        }
+        groups[x][z] = group;
+        for (int i = 0; i < GROUP_CHUNKS; i++)
+        {
+            chunk_t* chunk = &group->chunks[i];
+            tag_init(&chunk->tag);
+            chunk->vbo = NULL;
+            chunk->size = 0;
+            chunk->capacity = 0;
+        }
+        tag_init(&group->tag);
+    }
+    if (!worker_init())
+    {
+        SDL_Log("Failed to initialize workers");
+        return false;
+    }
+    world_move(0, 0, 0);
+    return true;
+}
+
+void world_free()
+{
+    worker_free();
+    for (int x = 0; x < WORLD_X; x++)
+    for (int z = 0; z < WORLD_Z; z++)
+    {
+        group_t* group = groups[x][z];
+        for (int i = 0; i < GROUP_CHUNKS; i++)
+        {
+            chunk_t* chunk = &group->chunks[i];
+            if (chunk->vbo)
+            {
+                SDL_ReleaseGPUBuffer(device, chunk->vbo);
+                chunk->vbo = NULL;
+            }
+        }
+        free(group);
+        groups[x][z] = NULL;
+    }
+    if (ibo)
+    {
+        SDL_ReleaseGPUBuffer(device, ibo);
+        ibo = NULL;
+    }
+    device = NULL;
+    capacity = 0;
+}
+
+void world_update()
+{
+    const uint32_t size = worker_update();
+    if (size <= capacity)
+    {
+        return;
+    }
+    if (ibo)
+    {
+        SDL_ReleaseGPUBuffer(device, ibo);
+        ibo = NULL;
+        capacity = 0;
+    }
+    SDL_GPUTransferBufferCreateInfo tbci = {0};
+    tbci.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+    tbci.size = size * 24;
+    SDL_GPUTransferBuffer* buffer = SDL_CreateGPUTransferBuffer(device, &tbci);
+    if (!buffer)
+    {
+        SDL_Log("Failed to create world transfer buffer: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUBufferCreateInfo bci = {0};
+    bci.usage = SDL_GPU_BUFFERUSAGE_INDEX;
+    bci.size = size * 24;
+    ibo = SDL_CreateGPUBuffer(device, &bci);
+    if (!ibo)
+    {
+        SDL_Log("Failed to create world index buffer: %s", SDL_GetError());
+        return;
+    }
+    capacity = size;
+    uint32_t* data = SDL_MapGPUTransferBuffer(device, buffer, false);
+    if (!data)
+    {
+        SDL_Log("Failed to map world transfer buffer: %s", SDL_GetError());
+        return;
+    }
+    for (uint32_t i = 0; i < size; i++)
+    for (uint32_t j = 0; j < 6; j++)
+    {
+        data[i * 6 + j] = i * 4 + block_get_index(j);
+    }
+    SDL_UnmapGPUTransferBuffer(device, buffer);
+    SDL_GPUCommandBuffer* commands = SDL_AcquireGPUCommandBuffer(device);
+    if (!commands)
+    {
+        SDL_Log("Failed to acquire world command buffer: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(commands);
+    if (!pass)
+    {
+        SDL_Log("Failed to begin world copy pass: %s", SDL_GetError());
+        return;
+    }
+    SDL_GPUTransferBufferLocation location = {0};
+    location.transfer_buffer = buffer;
+    SDL_GPUBufferRegion region = {0};
+    region.size = size * 24;
+    region.buffer = ibo;
+    SDL_UploadToGPUBuffer(pass, &location, &region, 1);
+    SDL_EndGPUCopyPass(pass);
+    SDL_SubmitGPUCommandBuffer(commands);
+    SDL_ReleaseGPUTransferBuffer(device, buffer);
+}
+
+void world_render(
+    const camera_t* camera,
+    void* commands,
+    void* pass)
+{
+    if (!ibo)
+    {
+        return;
+    }
+    SDL_GPUBufferBinding ibb = {0};
+    ibb.buffer = ibo;
+    SDL_BindGPUIndexBuffer(pass, &ibb, SDL_GPU_INDEXELEMENTSIZE_32BIT);
+    for (int i = 0; i < WORLD_CHUNKS; i++)
+    {
+        int x = presort[wy][i][0];
+        int y = presort[wy][i][1];
+        int z = presort[wy][i][2];
+        if (on_world_border(x, 1, z))
+        {
+            continue;
+        }
+        const group_t* group = groups[x][z];
+        if (!group->loaded)
+        {
+            continue;
+        }
+        const chunk_t* chunk = &group->chunks[y];
+        if (!chunk->renderable)
+        {
+            continue;
+        }
+        x += wx;
+        z += wz;
+        x *= CHUNK_X;
+        y *= CHUNK_Y;
+        z *= CHUNK_Z;
+        if (!camera_visible(camera, x, y, z, CHUNK_X, CHUNK_Y, CHUNK_Z))
+        {
+            continue;
+        }
+        int32_t position[3] = { x, y, z };
+        SDL_PushGPUVertexUniformData(commands, 1, position, 12);
+        SDL_GPUBufferBinding vbb = {0};
+        vbb.buffer = chunk->vbo;
+        SDL_BindGPUVertexBuffers(pass, 0, &vbb, 1);
+        assert(chunk->size <= capacity);
+        SDL_DrawGPUIndexedPrimitives(pass, chunk->size * 6, 1, 0, 0, 0);
+    }
+}
+
+void world_move(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z)
+{
+    const int a = x / CHUNK_X - WORLD_X / 2 - wx;
+    const int b = y / CHUNK_Y - WORLD_Y / 2 - wy;
+    const int c = z / CHUNK_Z - WORLD_Z / 2 - wz;
+    wx += a;
+    wy = clamp(wy + b, 0, WORLD_Y - 1);
+    wz += c;
+    if (!a && !c)
+    {
+        return;
+    }
+    int size = 0;
+    group_t* groups1[WORLD_X][WORLD_Z] = {0};
+    group_t* groups2[WORLD_GROUPS];
+    for (int s = 0; s < WORLD_X; s++)
+    for (int t = 0; t < WORLD_Z; t++)
+    {
+        const int cx = s - a;
+        const int cz = t - c;
+        if (in_world(cx, 0, cz))
+        {
+            groups1[cx][cz] = groups[s][t];
+        }
+        else
+        {
+            groups2[size++] = groups[s][t];
+        }
+        groups[s][t] = NULL;
+    }
+    memcpy(groups, groups1, sizeof(groups));
+    int i = size;
+    for (int s = 0; s < WORLD_X; s++)
+    for (int t = 0; t < WORLD_Z; t++)
+    {
+        if (groups[s][t])
+        {
+            continue;
+        }
+        --i;
+        sort[i][0] = s;
+        sort[i][1] = t;
+        group_t* group = groups2[i];
+        groups[s][t] = group;
+        for (int j = 0; j < GROUP_CHUNKS; j++)
+        {
+            chunk_t* chunk = &group->chunks[j];
+            memset(chunk->blocks, 0, sizeof(chunk->blocks));
+            chunk->renderable = false;
+            chunk->empty = true;
+        }
+        group->neighbors = 0;
+        group->loaded = false;
+    }
+    assert(!i);
+    sort_2d(WORLD_X / 2, WORLD_Z / 2, sort, size, true);
+    for (i = 0; i < size; i++)
+    {
+        const int s = sort[i][0];
+        const int t = sort[i][1];
+        assert(in_world(s, 0, t));
+        group_t* group = groups[s][t];
+        worker_load(group, s + wx, t + wz);
+    }
+}
+
+group_t* world_get_group(
+    const int32_t x,
+    const int32_t z)
+{
+    const int32_t a = x - wx;
+    const int32_t b = z - wz;
+    assert(in_world(a, 0, b));
+    return groups[a][b];
+}
+
+chunk_t* world_get_chunk(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z)
+{
+    const int32_t a = x - wx;
+    const int32_t b = z - wz;
+    assert(in_world(a, y, b));
+    return &groups[a][b]->chunks[y];
+}
+
+void world_get_group_neighbors(
+    const int32_t x,
+    const int32_t z,
+    group_t* neighbors[DIRECTION_2])
+{
+    for (direction_t direction = 0; direction < DIRECTION_2; direction++)
+    {
+        const int32_t a = x + directions[direction][0];
+        const int32_t b = z + directions[direction][2];
+        if (!world_in(a, 0, b))
+        {
+            neighbors[direction] = NULL;
+            continue;
+        }
+        group_t* group = world_get_group(a, b);
+        neighbors[direction] = group;
+    }
+}
+
+void world_get_chunk_neighbors(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z,
+    chunk_t* neighbors[DIRECTION_3])
+{
+    for (direction_t direction = 0; direction < DIRECTION_3; direction++)
+    {
+        const int32_t a = x + directions[direction][0];
+        const int32_t b = y + directions[direction][1];
+        const int32_t c = z + directions[direction][2];
+        if (!world_in(a, b, c))
+        {
+            neighbors[direction] = NULL;
+            continue;
+        }
+        group_t* group = world_get_group(a, c);
+        neighbors[direction] = &group->chunks[b];
+    }
+}
+
+bool world_in(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z)
+{
+    const int32_t a = x - wx;
+    const int32_t b = z - wz;
+    return in_world(a, y, b);
+}
+
+bool world_on_border(
+    const int32_t x,
+    const int32_t y,
+    const int32_t z)
+{
+    const int32_t a = x - wx;
+    const int32_t b = z - wz;
+    return on_world_border(a, y, b);
+}

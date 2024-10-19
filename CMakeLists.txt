@@ -1,0 +1,40 @@
+cmake_minimum_required(VERSION 3.24)
+project(blocks)
+
+set(BINARY_DIR ${CMAKE_BINARY_DIR}/bin)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${BINARY_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE ${BINARY_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG ${BINARY_DIR})
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/lib/SDL)
+add_executable(${PROJECT_NAME} WIN32
+    ${CMAKE_SOURCE_DIR}/src/block.c
+    ${CMAKE_SOURCE_DIR}/src/camera.c
+    ${CMAKE_SOURCE_DIR}/src/gfx/atlas.c
+    ${CMAKE_SOURCE_DIR}/src/gfx/gfx.c
+    ${CMAKE_SOURCE_DIR}/src/gfx/pipeline.c
+    ${CMAKE_SOURCE_DIR}/src/gfx/shader.c
+    ${CMAKE_SOURCE_DIR}/src/helpers.c
+    ${CMAKE_SOURCE_DIR}/src/main.c
+    ${CMAKE_SOURCE_DIR}/src/noise.c
+    ${CMAKE_SOURCE_DIR}/src/world.c
+)
+target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3)
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/src) # TODO
+set_target_properties(${PROJECT_NAME} PROPERTIES C_STANDARD 11)
+
+function(shader FILE)
+    string(REPLACE . _ NAME ${FILE})
+    set(SOURCE ${CMAKE_SOURCE_DIR}/res/${FILE})
+    set(OUTPUT ${BINARY_DIR}/${FILE})
+    add_custom_target(${NAME} ALL
+        COMMAND glslc ${SOURCE} -o ${OUTPUT} -I ${CMAKE_SOURCE_DIR}/src
+        DEPENDS ${SOURCE} BYPRODUCTS ${OUTPUT} COMMENT ${SOURCE})
+endfunction()
+shader(voxel.frag)
+shader(voxel.vert)
+
+configure_file(${CMAKE_SOURCE_DIR}/res/atlas.bmp ${BINARY_DIR} COPYONLY)
