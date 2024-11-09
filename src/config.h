@@ -22,6 +22,7 @@
 #define ATLAS_FACE_HEIGHT 16.0
 #define ATLAS_X_FACES 16.0
 #define ATLAS_Y_FACES 16.0
+#define ATLAS_LEVELS 7
 
 #define SHADOW_SIZE 4096
 #define SHADOW_Y 30.0f

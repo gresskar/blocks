@@ -418,8 +418,8 @@ static void load_atlas()
     tci.format = SDL_GPU_TEXTUREFORMAT_R8G8B8A8_UNORM;
     tci.type = SDL_GPU_TEXTURETYPE_2D;
     tci.layer_count_or_depth = 1;
-    tci.num_levels = 1;
-    tci.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
+    tci.num_levels = ATLAS_LEVELS;
+    tci.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER | SDL_GPU_TEXTUREUSAGE_COLOR_TARGET;
     tci.width = w;
     tci.height = h;
     atlas_texture = SDL_CreateGPUTexture(device, &tci);
@@ -466,6 +466,7 @@ static void load_atlas()
     region.d = 1;
     SDL_UploadToGPUTexture(pass, &tti, &region, 0);
     SDL_EndGPUCopyPass(pass);
+    SDL_GenerateMipmapsForGPUTexture(commands, atlas_texture);
     SDL_SubmitGPUCommandBuffer(commands);
     SDL_ReleaseGPUTransferBuffer(device, buffer);
 }
