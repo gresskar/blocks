@@ -21,8 +21,8 @@ void main()
     position.y = 1.0 - position.y;
     const float aspect = float(u_viewport.size.x) / float(u_viewport.size.y);
     {
-        const float width = ui_block_width / aspect;
-        const float height = ui_block_width;
+        const float width = ui_block_size / aspect;
+        const float height = ui_block_size;
         const vec2 start = vec2(ui_block_left, ui_block_bottom);
         const vec2 end = start + vec2(width, height);
         if (position.x > start.x && position.x < end.x &&
@@ -39,14 +39,14 @@ void main()
         }
     }
     {
-        const float width1 = ui_crosshair_width;
+        const float size1 = ui_crosshair_size;
         const float thickness1 = ui_crosshair_thickness;
-        const float width2 = ui_crosshair_width / aspect;
+        const float size2 = ui_crosshair_size / aspect;
         const float thickness2 = ui_crosshair_thickness / aspect;
-        const vec2 start1 = vec2(0.5 - width2, 0.5 - thickness1);
-        const vec2 end1 = vec2(0.5 + width2, 0.5 + thickness1);
-        const vec2 start2 = vec2(0.5 - thickness2, 0.5 - width1);
-        const vec2 end2 = vec2(0.5 + thickness2, 0.5 + width1);
+        const vec2 start1 = vec2(0.5 - size2, 0.5 - thickness1);
+        const vec2 end1 = vec2(0.5 + size2, 0.5 + thickness1);
+        const vec2 start2 = vec2(0.5 - thickness2, 0.5 - size1);
+        const vec2 end2 = vec2(0.5 + thickness2, 0.5 + size1);
         if ((position.x > start1.x && position.y > start1.y &&
             position.x < end1.x && position.y < end1.y) ||
             (position.x > start2.x && position.y > start2.y &&

@@ -549,27 +549,27 @@ static void create_vbos()
 {
     const float quad[][2] =
     {
-        {-1, -1 },
-        { 1, -1 },
-        {-1,  1 },
-        { 1,  1 },
-        { 1, -1 },
-        {-1,  1 },
+        {-1,-1},
+        { 1,-1},
+        {-1, 1},
+        { 1, 1},
+        { 1,-1},
+        {-1, 1},
     };
     const float cube[][3] =
     {
-        {-1, -1, -1 }, { 1, -1, -1 }, { 1,  1, -1 },
-        {-1, -1, -1 }, { 1,  1, -1 }, {-1,  1, -1 },
-        { 1, -1,  1 }, { 1,  1,  1 }, {-1,  1,  1 },
-        { 1, -1,  1 }, {-1,  1,  1 }, {-1, -1,  1 },
-        {-1, -1, -1 }, {-1,  1, -1 }, {-1,  1,  1 },
-        {-1, -1, -1 }, {-1,  1,  1 }, {-1, -1,  1 },
-        { 1, -1, -1 }, { 1, -1,  1 }, { 1,  1,  1 },
-        { 1, -1, -1 }, { 1,  1,  1 }, { 1,  1, -1 },
-        {-1,  1, -1 }, { 1,  1, -1 }, { 1,  1,  1 },
-        {-1,  1, -1 }, { 1,  1,  1 }, {-1,  1,  1 },
-        {-1, -1, -1 }, {-1, -1,  1 }, { 1, -1,  1 },
-        {-1, -1, -1 }, { 1, -1,  1 }, { 1, -1, -1 },
+        {-1,-1,-1}, { 1,-1,-1}, { 1, 1,-1},
+        {-1,-1,-1}, { 1, 1,-1}, {-1, 1,-1},
+        { 1,-1, 1}, { 1, 1, 1}, {-1, 1, 1},
+        { 1,-1, 1}, {-1, 1, 1}, {-1,-1, 1},
+        {-1,-1,-1}, {-1, 1,-1}, {-1, 1, 1},
+        {-1,-1,-1}, {-1, 1, 1}, {-1,-1, 1},
+        { 1,-1,-1}, { 1,-1, 1}, { 1, 1, 1},
+        { 1,-1,-1}, { 1, 1, 1}, { 1, 1,-1},
+        {-1, 1,-1}, { 1, 1,-1}, { 1, 1, 1},
+        {-1, 1,-1}, { 1, 1, 1}, {-1, 1, 1},
+        {-1,-1,-1}, {-1,-1, 1}, { 1,-1, 1},
+        {-1,-1,-1}, { 1,-1, 1}, { 1,-1,-1},
     };
     SDL_GPUBufferCreateInfo bci = {0};
     bci.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
@@ -924,8 +924,6 @@ static bool poll()
     {
         switch (event.type)
         {
-        case SDL_EVENT_QUIT:
-            return false;
         case SDL_EVENT_WINDOW_RESIZED:
             camera_viewport(&player_camera, event.window.data1, event.window.data2);
             break;
@@ -968,6 +966,7 @@ static bool poll()
             if (event.key.scancode == BUTTON_PAUSE)
             {
                 SDL_SetWindowRelativeMouseMode(window, false);
+                SDL_SetWindowFullscreen(window, false);
             }
             else if (event.key.scancode == BUTTON_BLOCK)
             {
@@ -988,6 +987,8 @@ static bool poll()
                 }
             }
             break;
+        case SDL_EVENT_QUIT:
+            return false;
         }
     }
     return true;
@@ -1000,30 +1001,12 @@ static void move(const float dt)
     float z = 0.0f;
     float speed = PLAYER_SPEED;
     const bool* state = SDL_GetKeyboardState(NULL);
-    if (state[BUTTON_RIGHT])
-    {
-        x++;
-    }
-    if (state[BUTTON_LEFT])
-    {
-        x--;
-    }
-    if (state[BUTTON_UP])
-    {
-        y++;
-    }
-    if (state[BUTTON_DOWN])
-    {
-        y--;
-    }
-    if (state[BUTTON_FORWARD])
-    {
-        z++;
-    }
-    if (state[BUTTON_BACKWARD])
-    {
-        z--;
-    }
+    x += state[BUTTON_RIGHT];
+    x -= state[BUTTON_LEFT];
+    y += state[BUTTON_UP];
+    y -= state[BUTTON_DOWN];
+    z += state[BUTTON_FORWARD];
+    z -= state[BUTTON_BACKWARD];
     if (state[BUTTON_SPRINT])
     {
         speed = PLAYER_SUPER_SPEED;

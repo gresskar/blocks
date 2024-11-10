@@ -17,6 +17,6 @@ u_position;
 
 void main()
 {
-    o_position = i_position * raycast_block / 2.0 + vec3(0.5, 0.5, 0.5);
+    o_position = i_position * raycast_block_size / 2.0 + vec3(0.5, 0.5, 0.5);
     gl_Position = u_mvp.matrix * vec4(u_position.vector + o_position, 1.0);
 }

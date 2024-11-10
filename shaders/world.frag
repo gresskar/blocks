@@ -27,7 +27,7 @@ void main()
     if (position.x <= 1.0 && position.x >= 0.0 &&
         position.y <= 1.0 && position.y >= 0.0 &&
         position.z <= 1.0 && position.z >= 0.0 &&
-        position.z - world_depth_bias > texture(u_depth, position.xy).r)
+        position.z - world_shadow_bias > texture(u_depth, position.xy).r)
     {
         const vec2 size = 1.0 / textureSize(u_depth, 0);
         for (int x = -1; x <= 1; x++)
@@ -36,14 +36,14 @@ void main()
             {
                 const vec2 uv = position.xy + vec2(x, y) * size;
                 const float depth = texture(u_depth, uv).r; 
-                shadow += position.z - world_depth_bias < depth ? 0.0 : world_shadow;
+                shadow += position.z - world_shadow_bias < depth ? 0.0 : world_shadow_factor;
             }    
         }
         shadow /= 9.0;
     }
     const float angle = max(dot(i_normal, -u_camera.vector), 0.0);
     const vec3 diffuse = angle * world_light_color;
-    const vec3 lighting = world_ambient_color + diffuse + (world_shadow - shadow);
+    const vec3 lighting = world_ambient_color + diffuse + (world_shadow_factor - shadow);
     const vec3 final = block.rgb * lighting;
     o_color = mix(vec4(final, block.a), vec4(sky_bottom_color, 1.0), i_fog);
 }

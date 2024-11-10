@@ -59,8 +59,7 @@ void main()
     o_uv.y = v / ATLAS_HEIGHT * ATLAS_FACE_HEIGHT;
     gl_Position = u_mvp.matrix * vec4(position, 1.0);
     o_fog = abs(length(position.xz - u_camera.vector.xz));
-    o_fog = clamp(o_fog / world_fog_distance, 0.0, 1.0);
-    o_fog = pow(o_fog, world_fog_factor);
+    o_fog = pow(clamp(o_fog / world_fog_distance, 0.0, 1.0), world_fog_factor);
     o_normal = normals[direction];
     o_shadow = bias * u_shadow.matrix * vec4(position, 1.0);
 }
