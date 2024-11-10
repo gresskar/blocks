@@ -32,7 +32,7 @@
 #define CHUNK_X 30
 #define CHUNK_Y 30
 #define CHUNK_Z 30
-#define GROUP_CHUNKS 6
+#define GROUP_CHUNKS 7
 #define GROUP_X (CHUNK_X)
 #define GROUP_Y (CHUNK_Y * GROUP_CHUNKS)
 #define GROUP_Z (CHUNK_Z)
@@ -74,7 +74,7 @@
 #define NOISE_SEA 30
 #define NOISE_GRASS (NOISE_SEA + 1)
 #define NOISE_MOUNTAIN (NOISE_GRASS + 30)
-#define NOISE_SNOW (NOISE_MOUNTAIN + 40)
+#define NOISE_SNOW (NOISE_MOUNTAIN + 55)
 #define NOISE_FREQUENCY 0.005f
 #define NOISE_SCALE 50.0f
 #define NOISE_EXPONENTIAL 1.3f

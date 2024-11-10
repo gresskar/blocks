@@ -101,31 +101,27 @@ static int loop(void* args)
         switch (worker->job->type)
         {
         case JOB_TYPE_LOAD:
-            {
-                assert(!group->loaded);
-                noise_generate(group, x, z);
-                database_get_blocks(group, x, z);
-                group->loaded = true;
-            }
+            assert(!group->loaded);
+            noise_generate(group, x, z);
+            database_get_blocks(group, x, z);
+            group->loaded = true;
             break;
         case JOB_TYPE_MESH:
+            chunk_t* chunk = &group->chunks[y];
+            assert(!chunk->empty);
+            chunk_t* neighbors[DIRECTION_3];
+            get_neighbors(x, y, z, neighbors);
+            if (voxmesh_vbo(
+                chunk,
+                neighbors,
+                y,
+                device,
+                &worker->opaque_tbo,
+                &worker->transparent_tbo,
+                &worker->opaque_size,
+                &worker->transparent_size))
             {
-                chunk_t* chunk = &group->chunks[y];
-                assert(!chunk->empty);
-                chunk_t* neighbors[DIRECTION_3];
-                get_neighbors(x, y, z, neighbors);
-                if (voxmesh_vbo(
-                    chunk,
-                    neighbors,
-                    y,
-                    device,
-                    &worker->opaque_tbo,
-                    &worker->transparent_tbo,
-                    &worker->opaque_size,
-                    &worker->transparent_size))
-                {
-                    chunk->renderable = 1;
-                }
+                chunk->renderable = 1;
             }
             break;
         default:
@@ -471,6 +467,7 @@ void world_update(
     const int y,
     const int z)
 {
+    move(x, y, z);
     uint32_t n;
     job_t data[WORLD_MAX_WORKERS];
     uint32_t size = 0;
@@ -513,7 +510,6 @@ void world_update(
             assert(0);
         }
     }
-    move(x, y, z);
     if (size > ibo_size)
     {
         if (ibo)
