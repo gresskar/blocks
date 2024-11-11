@@ -35,8 +35,9 @@ static SDL_GPUGraphicsPipeline* shadow_pipeline;
 static SDL_GPUTexture* shadow_texture;
 static SDL_GPUSampler* shadow_sampler;
 static SDL_GPUGraphicsPipeline* combine_pipeline;
-static SDL_GPUTexture* combine_texture1;
-static SDL_GPUTexture* combine_texture2;
+static SDL_GPUTexture* position_texture;
+static SDL_GPUTexture* uv_texture;
+static SDL_GPUTexture* voxel_texture;
 static SDL_GPUSampler* combine_sampler;
 static camera_t player_camera;
 static camera_t shadow_camera;
@@ -241,13 +242,16 @@ static void load_opaque_pipeline()
         .fragment_shader = load_shader(device, "opaque.frag", 0, 1),
         .target_info =
         {
-            .num_color_targets = 2,
+            .num_color_targets = 3,
             .color_target_descriptions = (SDL_GPUColorTargetDescription[])
             {{
                 .format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT,
             },
             {
-                .format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT,
+                .format = SDL_GPU_TEXTUREFORMAT_R32G32_FLOAT,
+            },
+            {
+                .format = SDL_GPU_TEXTUREFORMAT_R32_UINT,
             }},
             .has_depth_stencil_target = 1,
             .depth_stencil_format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT,
@@ -409,7 +413,7 @@ static void load_combine_pipeline()
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
         .vertex_shader = load_shader(device, "combine.vert", 0, 0),
-        .fragment_shader = load_shader(device, "combine.frag", 4, 4),
+        .fragment_shader = load_shader(device, "combine.frag", 4, 5),
         .target_info =
         {
             .num_color_targets = 1,
@@ -573,15 +577,20 @@ static bool resize_textures(const uint32_t width, const uint32_t height)
         SDL_ReleaseGPUTexture(device, depth_texture);
         depth_texture = NULL;
     }
-    if (combine_texture1)
+    if (position_texture)
     {
-        SDL_ReleaseGPUTexture(device, combine_texture1);
-        combine_texture1 = NULL;
+        SDL_ReleaseGPUTexture(device, position_texture);
+        position_texture = NULL;
     }
-    if (combine_texture2)
+    if (uv_texture)
     {
-        SDL_ReleaseGPUTexture(device, combine_texture2);
-        combine_texture1 = NULL;
+        SDL_ReleaseGPUTexture(device, uv_texture);
+        uv_texture = NULL;
+    }
+    if (voxel_texture)
+    {
+        SDL_ReleaseGPUTexture(device, voxel_texture);
+        voxel_texture = NULL;
     }
     SDL_GPUTextureCreateInfo tci = {0};
     tci.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET;
@@ -599,16 +608,26 @@ static bool resize_textures(const uint32_t width, const uint32_t height)
     }
     tci.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
     tci.format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;
-    combine_texture1 = SDL_CreateGPUTexture(device, &tci);
-    if (!combine_texture1)
+    position_texture = SDL_CreateGPUTexture(device, &tci);
+    if (!position_texture)
     {
-        SDL_Log("Failed to create combine texture1: %s", SDL_GetError());
+        SDL_Log("Failed to create position texture: %s", SDL_GetError());
         return false;
     }
-    combine_texture2 = SDL_CreateGPUTexture(device, &tci);
-    if (!combine_texture2)
+    tci.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+    tci.format = SDL_GPU_TEXTUREFORMAT_R32G32_FLOAT;
+    uv_texture = SDL_CreateGPUTexture(device, &tci);
+    if (!uv_texture)
     {
-        SDL_Log("Failed to create combine texture2: %s", SDL_GetError());
+        SDL_Log("Failed to create uv texture: %s", SDL_GetError());
+        return false;
+    }
+    tci.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
+    tci.format = SDL_GPU_TEXTUREFORMAT_R32_UINT;
+    voxel_texture = SDL_CreateGPUTexture(device, &tci);
+    if (!voxel_texture)
+    {
+        SDL_Log("Failed to create voxel texture: %s", SDL_GetError());
         return false;
     }
     return true;
@@ -842,17 +861,20 @@ static void draw_ui()
 
 static void draw_opaque()
 {
-    SDL_GPUColorTargetInfo cti[2] = {0};
-    cti[0].clear_color = (SDL_FColor) { 0.0f, 0.0f, 0.0f, 0.0f };
-    cti[0].load_op = SDL_GPU_LOADOP_CLEAR;
+    SDL_GPUColorTargetInfo cti[3] = {0};
+    cti[0].load_op = SDL_GPU_LOADOP_DONT_CARE;
     cti[0].store_op = SDL_GPU_STOREOP_STORE;
-    cti[0].texture = combine_texture1;
+    cti[0].texture = position_texture;
     cti[0].cycle = true;
     cti[1].clear_color = (SDL_FColor) { 0.0f, 0.0f, 0.0f, 0.0f };
     cti[1].load_op = SDL_GPU_LOADOP_CLEAR;
     cti[1].store_op = SDL_GPU_STOREOP_STORE;
-    cti[1].texture = combine_texture2;
-    cti[1].cycle = true;
+    cti[1].texture = uv_texture;
+    cti[2].cycle = true;
+    cti[2].load_op = SDL_GPU_LOADOP_DONT_CARE;
+    cti[2].store_op = SDL_GPU_STOREOP_STORE;
+    cti[2].texture = voxel_texture;
+    cti[2].cycle = true;
     SDL_GPUDepthStencilTargetInfo dsti = {0};
     dsti.clear_depth = 1.0f;
     dsti.load_op = SDL_GPU_LOADOP_CLEAR;
@@ -860,7 +882,7 @@ static void draw_opaque()
     dsti.stencil_load_op = SDL_GPU_LOADOP_DONT_CARE;
     dsti.texture = depth_texture;
     dsti.cycle = true;
-    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, cti, 2, &dsti);
+    SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, cti, 3, &dsti);
     if (!pass)
     {
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
@@ -975,26 +997,33 @@ static void draw_combine()
         tsb.texture = atlas_texture;
         SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
     }
-    if (combine_sampler && combine_texture1)
+    if (combine_sampler && position_texture)
     {
         SDL_GPUTextureSamplerBinding tsb = {0};
         tsb.sampler = combine_sampler;
-        tsb.texture = combine_texture1;
+        tsb.texture = position_texture;
         SDL_BindGPUFragmentSamplers(pass, 1, &tsb, 1);
     }
-    if (combine_sampler && combine_texture2)
+    if (combine_sampler && uv_texture)
     {
         SDL_GPUTextureSamplerBinding tsb = {0};
         tsb.sampler = combine_sampler;
-        tsb.texture = combine_texture2;
+        tsb.texture = uv_texture;
         SDL_BindGPUFragmentSamplers(pass, 2, &tsb, 1);
+    }
+    if (combine_sampler && voxel_texture)
+    {
+        SDL_GPUTextureSamplerBinding tsb = {0};
+        tsb.sampler = combine_sampler;
+        tsb.texture = voxel_texture;
+        SDL_BindGPUFragmentSamplers(pass, 3, &tsb, 1);
     }
     if (shadow_sampler && shadow_texture)
     {
         SDL_GPUTextureSamplerBinding tsb = {0};
         tsb.sampler = shadow_sampler;
         tsb.texture = shadow_texture;
-        SDL_BindGPUFragmentSamplers(pass, 3, &tsb, 1);
+        SDL_BindGPUFragmentSamplers(pass, 4, &tsb, 1);
     }
     SDL_PushGPUFragmentUniformData(commands, 0, &viewport, 8);
     SDL_PushGPUFragmentUniformData(commands, 1, player_position, 12);
@@ -1351,13 +1380,17 @@ int main(int argc, char** argv)
     {
         SDL_ReleaseGPUGraphicsPipeline(device, combine_pipeline);
     }
-    if (combine_texture1)
+    if (position_texture)
     {
-        SDL_ReleaseGPUTexture(device, combine_texture1);
+        SDL_ReleaseGPUTexture(device, position_texture);
     }
-    if (combine_texture2)
+    if (uv_texture)
     {
-        SDL_ReleaseGPUTexture(device, combine_texture2);
+        SDL_ReleaseGPUTexture(device, uv_texture);
+    }
+    if (voxel_texture)
+    {
+        SDL_ReleaseGPUTexture(device, voxel_texture);
     }
     if (combine_sampler)
     {
