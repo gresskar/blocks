@@ -8,7 +8,7 @@
 
 bool voxmesh_vbo(
     chunk_t* chunk,
-    chunk_t* neighbors[DIRECTION_3],
+    const chunk_t* neighbors[DIRECTION_3],
     const int height,
     SDL_GPUDevice* device,
     SDL_GPUTransferBuffer** opaque_tbo,

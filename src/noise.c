@@ -1,4 +1,5 @@
 #include <stb_perlin.h>
+#include <math.h>
 #include "block.h"
 #include "containers.h"
 #include "helpers.h"

@@ -229,7 +229,7 @@ void terrain_neighbors2(
     terrain_t* terrain,
     const int x,
     const int z,
-    void* neighbors[DIRECTION_2])
+    group_t* neighbors[DIRECTION_2])
 {
     assert(terrain);
     assert(terrain_in2(terrain, x, z));
