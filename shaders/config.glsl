@@ -17,8 +17,7 @@ const float ui_block_size = 0.05;
 const float raycast_block_size = 1.05;
 const float raycast_alpha = 0.2;
 
-const vec3 world_light_color = vec3(0.3, 0.3, 0.3);
-const vec3 world_ambient_color = vec3(0.2, 0.2, 0.2);
+const float world_ambient_light = 0.4;
 const float world_fog_distance = 400.0;
 const float world_fog_factor = 2.5;
 const float world_shadow_bias = 0.0005;

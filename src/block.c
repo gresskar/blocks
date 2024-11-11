@@ -7,7 +7,6 @@ bool block_opaque(const block_t block)
     assert(block < BLOCK_COUNT);
     switch (block)
     {
-    case BLOCK_CLOUD:
     case BLOCK_WATER:
         return 0;
     }
@@ -43,6 +42,17 @@ bool block_sprite(const block_t block)
         return 1;
     }
     return 0;
+}
+
+bool block_shadow(const block_t block)
+{
+    assert(block < BLOCK_COUNT);
+    switch (block)
+    {
+    case BLOCK_CLOUD:
+        return 0;
+    }
+    return 1;
 }
 
 const int blocks[][DIRECTION_3][2] =
