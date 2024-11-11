@@ -77,12 +77,12 @@ const int blocks[][DIRECTION_3][2] =
     },
     [BLOCK_CLOUD] =
     {
-        [DIRECTION_E] = { 8, 0 },
-        [DIRECTION_W] = { 8, 0 },
-        [DIRECTION_N] = { 8, 0 },
-        [DIRECTION_S] = { 8, 0 },
-        [DIRECTION_U] = { 8, 0 },
-        [DIRECTION_D] = { 8, 0 },
+        [DIRECTION_E] = { 9, 0 },
+        [DIRECTION_W] = { 9, 0 },
+        [DIRECTION_N] = { 9, 0 },
+        [DIRECTION_S] = { 9, 0 },
+        [DIRECTION_U] = { 9, 0 },
+        [DIRECTION_D] = { 9, 0 },
     },
     [BLOCK_DANDELION] =
     {
@@ -95,21 +95,21 @@ const int blocks[][DIRECTION_3][2] =
     },
     [BLOCK_DIRT] =
     {
+        [DIRECTION_E] = { 3, 0 },
+        [DIRECTION_W] = { 3, 0 },
+        [DIRECTION_N] = { 3, 0 },
+        [DIRECTION_S] = { 3, 0 },
+        [DIRECTION_U] = { 3, 0 },
+        [DIRECTION_D] = { 3, 0 },
+    },
+    [BLOCK_GRASS] =
+    {
         [DIRECTION_E] = { 2, 0 },
         [DIRECTION_W] = { 2, 0 },
         [DIRECTION_N] = { 2, 0 },
         [DIRECTION_S] = { 2, 0 },
-        [DIRECTION_U] = { 2, 0 },
-        [DIRECTION_D] = { 2, 0 },
-    },
-    [BLOCK_GRASS] =
-    {
-        [DIRECTION_E] = { 1, 0 },
-        [DIRECTION_W] = { 1, 0 },
-        [DIRECTION_N] = { 1, 0 },
-        [DIRECTION_S] = { 1, 0 },
-        [DIRECTION_U] = { 0, 0 },
-        [DIRECTION_D] = { 2, 0 },
+        [DIRECTION_U] = { 1, 0 },
+        [DIRECTION_D] = { 3, 0 },
     },
     [BLOCK_LEAVES] =
     {
@@ -122,12 +122,12 @@ const int blocks[][DIRECTION_3][2] =
     },
     [BLOCK_LOG] =
     {
-        [DIRECTION_E] = { 7, 0 },
-        [DIRECTION_W] = { 7, 0 },
-        [DIRECTION_N] = { 7, 0 },
-        [DIRECTION_S] = { 7, 0 },
-        [DIRECTION_U] = { 6, 0 },
-        [DIRECTION_D] = { 6, 0 },
+        [DIRECTION_E] = { 8, 0 },
+        [DIRECTION_W] = { 8, 0 },
+        [DIRECTION_N] = { 8, 0 },
+        [DIRECTION_S] = { 8, 0 },
+        [DIRECTION_U] = { 7, 0 },
+        [DIRECTION_D] = { 7, 0 },
     },
     [BLOCK_ROSE] =
     {
@@ -140,15 +140,6 @@ const int blocks[][DIRECTION_3][2] =
     },
     [BLOCK_SAND] =
     {
-        [DIRECTION_E] = { 4, 0 },
-        [DIRECTION_W] = { 4, 0 },
-        [DIRECTION_N] = { 4, 0 },
-        [DIRECTION_S] = { 4, 0 },
-        [DIRECTION_U] = { 4, 0 },
-        [DIRECTION_D] = { 4, 0 },
-    },
-    [BLOCK_SNOW] =
-    {
         [DIRECTION_E] = { 5, 0 },
         [DIRECTION_W] = { 5, 0 },
         [DIRECTION_N] = { 5, 0 },
@@ -156,14 +147,23 @@ const int blocks[][DIRECTION_3][2] =
         [DIRECTION_U] = { 5, 0 },
         [DIRECTION_D] = { 5, 0 },
     },
+    [BLOCK_SNOW] =
+    {
+        [DIRECTION_E] = { 6, 0 },
+        [DIRECTION_W] = { 6, 0 },
+        [DIRECTION_N] = { 6, 0 },
+        [DIRECTION_S] = { 6, 0 },
+        [DIRECTION_U] = { 6, 0 },
+        [DIRECTION_D] = { 6, 0 },
+    },
     [BLOCK_STONE] =
     {
-        [DIRECTION_E] = { 3, 0 },
-        [DIRECTION_W] = { 3, 0 },
-        [DIRECTION_N] = { 3, 0 },
-        [DIRECTION_S] = { 3, 0 },
-        [DIRECTION_U] = { 3, 0 },
-        [DIRECTION_D] = { 3, 0 },
+        [DIRECTION_E] = { 4, 0 },
+        [DIRECTION_W] = { 4, 0 },
+        [DIRECTION_N] = { 4, 0 },
+        [DIRECTION_S] = { 4, 0 },
+        [DIRECTION_U] = { 4, 0 },
+        [DIRECTION_D] = { 4, 0 },
     },
     [BLOCK_WATER] =
     {

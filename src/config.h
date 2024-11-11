@@ -36,9 +36,9 @@
 #define GROUP_X (CHUNK_X)
 #define GROUP_Y (CHUNK_Y * GROUP_CHUNKS)
 #define GROUP_Z (CHUNK_Z)
-#define WORLD_X 30
+#define WORLD_X 25
 #define WORLD_Y (GROUP_CHUNKS)
-#define WORLD_Z 30
+#define WORLD_Z 25
 #define WORLD_GROUPS (WORLD_X * WORLD_Z)
 #define WORLD_CHUNKS (WORLD_Y * WORLD_GROUPS)
 #define WORLD_MAX_JOBS 3000

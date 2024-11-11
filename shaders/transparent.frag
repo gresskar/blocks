@@ -19,10 +19,6 @@ u_camera;
 void main()
 {
     const vec4 block = texture(u_atlas, i_uv);
-    if (block.a < 0.001)
-    {
-        discard;
-    }
     float shadow = 0.0;
     if (i_shadow != 0)
     {
