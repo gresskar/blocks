@@ -1,9 +1,17 @@
 #include <stb_perlin.h>
 #include <math.h>
+#include <stddef.h>
+#include <stdlib.h>
+#include <time.h>
 #include "block.h"
 #include "containers.h"
 #include "helpers.h"
 #include "noise.h"
+
+void noise_init()
+{
+    srand(time(NULL));
+}
 
 void noise_generate(
     group_t* group,
@@ -148,5 +156,48 @@ void noise_generate(
                 group_set_block(group, a, NOISE_CLOUD_Y + y, b, BLOCK_CLOUD);
             }
         }
+    }
+}
+
+void noise_ssao_rotation(float* data, const int size)
+{
+    assert(data);
+    assert(size);
+    for (int i = 0; i < size; i++)
+    {
+        data[i * 4 + 0] = (float) rand() / RAND_MAX * 2.0f - 1.0f;
+        data[i * 4 + 1] = (float) rand() / RAND_MAX * 2.0f - 1.0f;
+        data[i * 4 + 2] = 0.0f;
+        data[i * 4 + 3] = 0.0f;
+    }
+}
+
+void noise_ssao_kernel(float* data, const int size)
+{
+    assert(data);
+    assert(size);
+    for (int i = 0; i < size; i++)
+    {
+        data[i * 4 + 0] = (float) rand() / RAND_MAX * 2.0f - 1.0f;
+        data[i * 4 + 1] = (float) rand() / RAND_MAX * 2.0f - 1.0f;
+        data[i * 4 + 2] = (float) rand() / RAND_MAX;
+        data[i * 4 + 3] = 0.0f;
+        float length = 0.0f;
+        length += data[i * 4 + 0] * data[i * 4 + 0];
+        length += data[i * 4 + 1] * data[i * 4 + 1];
+        length += data[i * 4 + 2] * data[i * 4 + 2];
+        length = sqrtf(length);
+        if (length < EPSILON)
+        {
+            continue;
+        }
+        data[i * 4 + 0] /= length;
+        data[i * 4 + 1] /= length;
+        data[i * 4 + 2] /= length;
+        length = (float) i / size;
+        length = 0.1f + length * length * 0.9f;
+        data[i * 4 + 0] *= length;
+        data[i * 4 + 1] *= length;
+        data[i * 4 + 2] *= length;
     }
 }

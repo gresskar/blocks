@@ -11,11 +11,16 @@ layout(set = 1, binding = 0) uniform position_t
     ivec3 vector;
 }
 u_position;
-layout(set = 1, binding = 1) uniform mvp_t
+layout(set = 1, binding = 1) uniform view_t
 {
     mat4 matrix;
 }
-u_mvp;
+u_view;
+layout(set = 1, binding = 2) uniform proj_t
+{
+    mat4 matrix;
+}
+u_proj;
 
 void main()
 {
@@ -26,8 +31,9 @@ void main()
     const uint u = i_voxel >> VOXEL_U_OFFSET & VOXEL_U_MASK;
     const uint v = i_voxel >> VOXEL_V_OFFSET & VOXEL_V_MASK;
     const uint direction = i_voxel >> VOXEL_DIRECTION_OFFSET & VOXEL_DIRECTION_MASK;
-    o_position = vec3(u_position.vector) + vec3(x, y, z);
+    vec4 position = u_view.matrix * vec4(u_position.vector + vec3(x, y, z), 1.0);
+    o_position = position.xyz;
     o_uv.x = u / ATLAS_WIDTH * ATLAS_FACE_WIDTH;
     o_uv.y = v / ATLAS_HEIGHT * ATLAS_FACE_HEIGHT;
-    gl_Position = u_mvp.matrix * vec4(o_position, 1.0);
+    gl_Position = u_proj.matrix * position;
 }

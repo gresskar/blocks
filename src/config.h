@@ -29,6 +29,10 @@
 #define SHADOW_PITCH (-PI / 4.0f)
 #define SHADOW_YAW (PI / 8.0f)
 
+#define SSAO_KERNEL_SIZE 64
+#define SSAO_WIDTH 4
+#define SSAO_HEIGHT 4
+
 #define CHUNK_X 30
 #define CHUNK_Y 30
 #define CHUNK_Z 30
@@ -36,9 +40,9 @@
 #define GROUP_X (CHUNK_X)
 #define GROUP_Y (CHUNK_Y * GROUP_CHUNKS)
 #define GROUP_Z (CHUNK_Z)
-#define WORLD_X 25
+#define WORLD_X 30
 #define WORLD_Y (GROUP_CHUNKS)
-#define WORLD_Z 25
+#define WORLD_Z 30
 #define WORLD_GROUPS (WORLD_X * WORLD_Z)
 #define WORLD_CHUNKS (WORLD_Y * WORLD_GROUPS)
 #define WORLD_MAX_JOBS 3000
