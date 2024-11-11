@@ -304,7 +304,7 @@ bool voxmesh_vbo(
         }
         if (chunk->opaque_size)
         {
-            opaque_data = SDL_MapGPUTransferBuffer(device, *opaque_tbo, false);
+            opaque_data = SDL_MapGPUTransferBuffer(device, *opaque_tbo, true);
             if (!opaque_data)
             {
                 SDL_Log("Failed to map tbo buffer: %s", SDL_GetError());
@@ -313,7 +313,7 @@ bool voxmesh_vbo(
         }
         if (chunk->transparent_size)
         {
-            transparent_data = SDL_MapGPUTransferBuffer(device, *transparent_tbo, false);
+            transparent_data = SDL_MapGPUTransferBuffer(device, *transparent_tbo, true);
             if (!transparent_data)
             {
                 SDL_Log("Failed to map tbo buffer: %s", SDL_GetError());

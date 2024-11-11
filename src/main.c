@@ -597,7 +597,7 @@ static void create_vbos()
         SDL_Log("Failed to create transfer buffer: %s", SDL_GetError());
         return;
     }
-    data = SDL_MapGPUTransferBuffer(device, qtbo, 0);
+    data = SDL_MapGPUTransferBuffer(device, qtbo, false);
     if (!data)
     {
         SDL_Log("Failed to map transfer buffer: %s", SDL_GetError());
@@ -611,7 +611,7 @@ static void create_vbos()
         SDL_Log("Failed to create transfer buffer: %s", SDL_GetError());
         return;
     }
-    data = SDL_MapGPUTransferBuffer(device, ctbo, 0);
+    data = SDL_MapGPUTransferBuffer(device, ctbo, false);
     if (!data)
     {
         SDL_Log("Failed to map transfer buffer: %s", SDL_GetError());
@@ -749,7 +749,9 @@ static void draw_opaque()
     dsti.clear_depth = 1.0f;
     dsti.load_op = SDL_GPU_LOADOP_CLEAR;
     dsti.store_op = SDL_GPU_STOREOP_STORE;
+    dsti.stencil_load_op = SDL_GPU_LOADOP_DONT_CARE;
     dsti.texture = depth_texture;
+    dsti.cycle = true;
     SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 1, &dsti);
     if (!pass)
     {
@@ -832,7 +834,9 @@ static void draw_shadow()
     dsti.clear_depth = 1.0f;
     dsti.load_op = SDL_GPU_LOADOP_CLEAR;
     dsti.store_op = SDL_GPU_STOREOP_STORE;
+    dsti.stencil_load_op = SDL_GPU_LOADOP_DONT_CARE;
     dsti.texture = shadow_texture;
+    dsti.cycle = true;
     SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, NULL, 0, &dsti);
     if (!pass)
     {
