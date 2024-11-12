@@ -14,7 +14,7 @@ void main()
     {
         discard;
     }
-    o_position = vec4(i_position, 1.0);
+    o_position = vec4(i_position, 0.0);
     o_uv = i_uv;
     o_voxel = i_voxel;
 }

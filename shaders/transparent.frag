@@ -23,30 +23,13 @@ void main()
     if (i_shadow != 0)
     {
         const vec3 position = i_shadow_position.xyz / i_shadow_position.w;
-        if (dot(i_normal, -u_camera.vector) < 0.0)
-        {
-            shadow = world_shadow_factor;
-        }
-        else if (
+        if (dot(i_normal, -u_camera.vector) < 0.0 || (
             position.x <= 1.0 && position.x >= 0.0 &&
             position.y <= 1.0 && position.y >= 0.0 &&
             position.z <= 1.0 && position.z >= 0.0 &&
-            position.z - world_shadow_bias > texture(u_shadow_map, position.xy).r)
+            position.z - world_shadow_bias > texture(u_shadow_map, position.xy).r))
         {
-            const vec2 size = 1.0 / textureSize(u_shadow_map, 0);
-            for (int x = -1; x <= 1; x++)
-            {
-                for (int y = -1; y <= 1; y++)
-                {
-                    const vec2 uv = position.xy + vec2(x, y) * size;
-                    const float depth = texture(u_shadow_map, uv).r;
-                    if (position.z - world_shadow_bias >= depth)
-                    {
-                        shadow += world_shadow_factor;
-                    }
-                }
-            }
-            shadow /= 9.0;
+            shadow = world_shadow_factor;
         }
     }
     const vec3 color = block.rgb * (world_ambient_light + world_shadow_factor - shadow);

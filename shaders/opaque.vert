@@ -32,7 +32,7 @@ void main()
     const uint v = i_voxel >> VOXEL_V_OFFSET & VOXEL_V_MASK;
     const uint direction = i_voxel >> VOXEL_DIRECTION_OFFSET & VOXEL_DIRECTION_MASK;
     vec4 position = u_view.matrix * vec4(u_position.vector + vec3(x, y, z), 1.0);
-    o_position = position.xyz;
+    o_position = u_position.vector + vec3(x, y, z);
     o_uv.x = u / ATLAS_WIDTH * ATLAS_FACE_WIDTH;
     o_uv.y = v / ATLAS_HEIGHT * ATLAS_FACE_HEIGHT;
     gl_Position = u_proj.matrix * position;

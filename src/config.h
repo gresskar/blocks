@@ -29,10 +29,6 @@
 #define SHADOW_PITCH (-PI / 4.0f)
 #define SHADOW_YAW (PI / 8.0f)
 
-#define SSAO_KERNEL_SIZE 64
-#define SSAO_WIDTH 4
-#define SSAO_HEIGHT 4
-
 #define CHUNK_X 30
 #define CHUNK_Y 30
 #define CHUNK_Z 30

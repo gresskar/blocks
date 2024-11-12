@@ -1,6 +1,7 @@
 #version 450
 
 #include "config.glsl"
+#include "helpers.glsl"
 
 layout(location = 0) in uint i_voxel;
 layout(location = 0) out vec2 o_uv;
@@ -28,24 +29,6 @@ layout(set = 1, binding = 3) uniform shadow_t
     mat4 matrix;
 }
 u_shadow;
-
-const vec3 normals[6] = vec3[6]
-(
-    vec3( 0, 0, 1),
-    vec3( 0, 0,-1),
-    vec3( 1, 0, 0),
-    vec3(-1, 0, 0),
-    vec3( 0, 1, 0),
-    vec3( 0,-1, 0)
-);
-
-const mat4 bias = mat4
-(
-    0.5, 0.0, 0.0, 0.0,
-    0.0,-0.5, 0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0,
-    0.5, 0.5, 0.0, 1.0
-);
 
 void main()
 {

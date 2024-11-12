@@ -34,17 +34,14 @@ static void* atlas_data;
 static SDL_GPUGraphicsPipeline* shadow_pipeline;
 static SDL_GPUTexture* shadow_texture;
 static SDL_GPUSampler* shadow_sampler;
-static SDL_GPUGraphicsPipeline* combine_pipeline;
+static SDL_GPUGraphicsPipeline* composite_pipeline;
 static SDL_GPUTexture* position_texture;
 static SDL_GPUTexture* uv_texture;
 static SDL_GPUTexture* voxel_texture;
-static SDL_GPUSampler* combine_sampler;
-static SDL_GPUGraphicsPipeline* ssao_pipeline;
-static SDL_GPUTexture* ssao_texture;
-static SDL_GPUSampler* ssao_sampler;
-static SDL_GPUTexture* ssao_rotation_texture;
-static SDL_GPUSampler* ssao_rotation_sampler;
-static float ssao_kernel[SSAO_KERNEL_SIZE * 4];
+static SDL_GPUSampler* composite_sampler;
+static SDL_GPUGraphicsPipeline* edge_pipeline;
+static SDL_GPUTexture* edge_texture;
+static SDL_GPUSampler* edge_sampler;
 static camera_t player_camera;
 static camera_t shadow_camera;
 static uint64_t time1;
@@ -414,12 +411,12 @@ static void load_shadow_pipeline()
     SDL_ReleaseGPUShader(device, info.fragment_shader);
 }
 
-static void load_combine_pipeline()
+static void load_composite_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = load_shader(device, "combine.vert", 0, 0),
-        .fragment_shader = load_shader(device, "combine.frag", 5, 6),
+        .vertex_shader = load_shader(device, "composite.vert", 0, 0),
+        .fragment_shader = load_shader(device, "composite.frag", 5, 6),
         .target_info =
         {
             .num_color_targets = 1,
@@ -445,22 +442,22 @@ static void load_combine_pipeline()
     };
     if (info.vertex_shader && info.fragment_shader)
     {
-        combine_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+        composite_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
     }
-    if (!combine_pipeline)
+    if (!composite_pipeline)
     {
-        SDL_Log("Failed to create combine pipeline: %s", SDL_GetError());
+        SDL_Log("Failed to create composite pipeline: %s", SDL_GetError());
     }
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
 }
 
-static void load_ssao_pipeline()
+static void load_edge_pipeline()
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = load_shader(device, "ssao.vert", 0, 0),
-        .fragment_shader = load_shader(device, "ssao.frag", 4, 3),
+        .vertex_shader = load_shader(device, "edge.vert", 0, 0),
+        .fragment_shader = load_shader(device, "edge.frag", 0, 3),
         .target_info =
         {
             .num_color_targets = 1,
@@ -486,11 +483,11 @@ static void load_ssao_pipeline()
     };
     if (info.vertex_shader && info.fragment_shader)
     {
-        ssao_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
+        edge_pipeline = SDL_CreateGPUGraphicsPipeline(device, &info);
     }
-    if (!ssao_pipeline)
+    if (!edge_pipeline)
     {
-        SDL_Log("Failed to create ssao pipeline: %s", SDL_GetError());
+        SDL_Log("Failed to create edge pipeline: %s", SDL_GetError());
     }
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
@@ -585,22 +582,24 @@ static void create_samplers()
         SDL_Log("Failed to create atlas sampler: %s", SDL_GetError());
         return;
     }
+    composite_sampler = SDL_CreateGPUSampler(device, &sci);
+    if (!composite_sampler)
+    {
+        SDL_Log("Failed to create composite sampler: %s", SDL_GetError());
+        return;
+    }
+    edge_sampler = SDL_CreateGPUSampler(device, &sci);
+    if (!edge_sampler)
+    {
+        SDL_Log("Failed to create edge sampler: %s", SDL_GetError());
+        return;
+    }
+    sci.min_filter = SDL_GPU_FILTER_LINEAR;
+    sci.mag_filter = SDL_GPU_FILTER_LINEAR;
     shadow_sampler = SDL_CreateGPUSampler(device, &sci);
     if (!shadow_sampler)
     {
         SDL_Log("Failed to create shadow sampler: %s", SDL_GetError());
-        return;
-    }
-    combine_sampler = SDL_CreateGPUSampler(device, &sci);
-    if (!combine_sampler)
-    {
-        SDL_Log("Failed to create combine sampler: %s", SDL_GetError());
-        return;
-    }
-    ssao_sampler = SDL_CreateGPUSampler(device, &sci);
-    if (!ssao_sampler)
-    {
-        SDL_Log("Failed to create ssao sampler: %s", SDL_GetError());
         return;
     }
 }
@@ -621,56 +620,6 @@ static void create_textures()
         SDL_Log("Failed to create shadow texture: %s", SDL_GetError());
         return;
     }
-    tci.usage = SDL_GPU_TEXTUREUSAGE_SAMPLER;
-    tci.format = SDL_GPU_TEXTUREFORMAT_R32G32B32A32_FLOAT;;
-    tci.width = SSAO_WIDTH;
-    tci.height = SSAO_HEIGHT;
-    ssao_rotation_texture = SDL_CreateGPUTexture(device, &tci);
-    if (!ssao_rotation_texture)
-    {
-        SDL_Log("Failed to create ssao rotation texture: %s", SDL_GetError());
-        return;
-    }
-    SDL_GPUTransferBufferCreateInfo tbci = {0};
-    tbci.size = SSAO_WIDTH * SSAO_HEIGHT * 4 * 4;
-    tbci.usage = SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
-    SDL_GPUTransferBuffer* buffer = SDL_CreateGPUTransferBuffer(device, &tbci);;
-    if (!buffer)
-    {
-        SDL_Log("Failed to create transfer buffer: %s", SDL_GetError());
-        return;
-    }
-    void* data = SDL_MapGPUTransferBuffer(device, buffer, 0);
-    if (!data)
-    {
-        SDL_Log("Failed to map transfer buffer: %s", SDL_GetError());
-        return;
-    }
-    noise_ssao_rotation(data, SSAO_WIDTH * SSAO_HEIGHT);
-    SDL_UnmapGPUTransferBuffer(device, buffer);
-    SDL_GPUCommandBuffer* commands = SDL_AcquireGPUCommandBuffer(device);
-    if (!commands)
-    {
-        SDL_Log("Failed to acquire command buffer: %s", SDL_GetError());
-        return;
-    }
-    SDL_GPUCopyPass* pass = SDL_BeginGPUCopyPass(commands);
-    if (!pass)
-    {
-        SDL_Log("Failed to begin copy pass: %s", SDL_GetError());
-        return;
-    }
-    SDL_GPUTextureTransferInfo tti = {0};
-    tti.transfer_buffer = buffer;
-    SDL_GPUTextureRegion region = {0};
-    region.texture = ssao_rotation_texture;
-    region.w = SSAO_WIDTH;
-    region.h = SSAO_HEIGHT;
-    region.d = 1;
-    SDL_UploadToGPUTexture(pass, &tti, &region, 0);
-    SDL_EndGPUCopyPass(pass);
-    SDL_SubmitGPUCommandBuffer(commands);
-    SDL_ReleaseGPUTransferBuffer(device, buffer);
 }
 
 static bool resize_textures(const uint32_t width, const uint32_t height)
@@ -695,10 +644,10 @@ static bool resize_textures(const uint32_t width, const uint32_t height)
         SDL_ReleaseGPUTexture(device, voxel_texture);
         voxel_texture = NULL;
     }
-    if (ssao_texture)
+    if (edge_texture)
     {
-        SDL_ReleaseGPUTexture(device, ssao_texture);
-        ssao_texture = NULL;
+        SDL_ReleaseGPUTexture(device, edge_texture);
+        edge_texture = NULL;
     }
     SDL_GPUTextureCreateInfo tci = {0};
     tci.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET;
@@ -740,10 +689,10 @@ static bool resize_textures(const uint32_t width, const uint32_t height)
     }
     tci.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
     tci.format = SDL_GPU_TEXTUREFORMAT_R32_FLOAT;
-    ssao_texture = SDL_CreateGPUTexture(device, &tci);
-    if (!ssao_texture)
+    edge_texture = SDL_CreateGPUTexture(device, &tci);
+    if (!edge_texture)
     {
-        SDL_Log("Failed to create ssao texture: %s", SDL_GetError());
+        SDL_Log("Failed to create edge texture: %s", SDL_GetError());
         return false;
     }
     return true;
@@ -975,13 +924,13 @@ static void draw_ui()
     SDL_EndGPURenderPass(pass);
 }
 
-static void draw_ssao()
+static void draw_edge()
 {
     SDL_GPUColorTargetInfo cti = {0};
     cti.clear_color = (SDL_FColor) { 0.0f, 0.0f, 0.0f, 0.0f };
     cti.load_op = SDL_GPU_LOADOP_CLEAR;
     cti.store_op = SDL_GPU_STOREOP_STORE;
-    cti.texture = ssao_texture;
+    cti.texture = edge_texture;
     cti.cycle = true;
     SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 1, NULL);
     if (!pass)
@@ -989,35 +938,30 @@ static void draw_ssao()
         SDL_Log("Failed to begin render pass: %s", SDL_GetError());
         return;
     }
-    int32_t viewport[2] = { width, height };
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = quad_vbo;
-    SDL_BindGPUGraphicsPipeline(pass, ssao_pipeline);
-    if (ssao_sampler && position_texture)
+    SDL_BindGPUGraphicsPipeline(pass, edge_pipeline);
+    if (edge_sampler && position_texture)
     {
         SDL_GPUTextureSamplerBinding tsb = {0};
-        tsb.sampler = ssao_sampler;
+        tsb.sampler = edge_sampler;
         tsb.texture = position_texture;
         SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
     }
-    if (ssao_sampler && voxel_texture)
+    if (edge_sampler && uv_texture)
     {
         SDL_GPUTextureSamplerBinding tsb = {0};
-        tsb.sampler = ssao_sampler;
-        tsb.texture = voxel_texture;
+        tsb.sampler = edge_sampler;
+        tsb.texture = uv_texture;
         SDL_BindGPUFragmentSamplers(pass, 1, &tsb, 1);
     }
-    if (ssao_sampler && ssao_rotation_texture)
+    if (edge_sampler && voxel_texture)
     {
         SDL_GPUTextureSamplerBinding tsb = {0};
-        tsb.sampler = ssao_sampler;
-        tsb.texture = ssao_rotation_texture;
+        tsb.sampler = edge_sampler;
+        tsb.texture = voxel_texture;
         SDL_BindGPUFragmentSamplers(pass, 2, &tsb, 1);
     }
-    SDL_PushGPUFragmentUniformData(commands, 0, &viewport, 8);
-    SDL_PushGPUFragmentUniformData(commands, 1, ssao_kernel, sizeof(ssao_kernel));
-    SDL_PushGPUFragmentUniformData(commands, 2, player_camera.proj, 64);
-    SDL_PushGPUFragmentUniformData(commands, 3, player_camera.view, 64);
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 6, 1, 0, 0);
     SDL_EndGPURenderPass(pass);
@@ -1054,6 +998,7 @@ static void draw_opaque()
     }
     float position[3];
     float vector[3];
+    float planes[2] = { player_camera.near, player_camera.far };
     camera_get_position(&player_camera, &position[0], &position[1], &position[2]);
     camera_vector(&shadow_camera, &vector[0], &vector[1], &vector[2]);
     SDL_BindGPUGraphicsPipeline(pass, opaque_pipeline);
@@ -1134,7 +1079,7 @@ static void draw_shadow()
     SDL_EndGPURenderPass(pass);
 }
 
-static void draw_combine()
+static void draw_composite()
 {
     SDL_GPUColorTargetInfo cti = {0};
     cti.load_op = SDL_GPU_LOADOP_LOAD;
@@ -1153,7 +1098,7 @@ static void draw_combine()
     camera_vector(&shadow_camera, &shadow_vector[0], &shadow_vector[1], &shadow_vector[2]);
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = quad_vbo;
-    SDL_BindGPUGraphicsPipeline(pass, combine_pipeline);
+    SDL_BindGPUGraphicsPipeline(pass, composite_pipeline);
     if (atlas_sampler && atlas_texture)
     {
         SDL_GPUTextureSamplerBinding tsb = {0};
@@ -1161,24 +1106,24 @@ static void draw_combine()
         tsb.texture = atlas_texture;
         SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
     }
-    if (combine_sampler && position_texture)
+    if (composite_sampler && position_texture)
     {
         SDL_GPUTextureSamplerBinding tsb = {0};
-        tsb.sampler = combine_sampler;
+        tsb.sampler = composite_sampler;
         tsb.texture = position_texture;
         SDL_BindGPUFragmentSamplers(pass, 1, &tsb, 1);
     }
-    if (combine_sampler && uv_texture)
+    if (composite_sampler && uv_texture)
     {
         SDL_GPUTextureSamplerBinding tsb = {0};
-        tsb.sampler = combine_sampler;
+        tsb.sampler = composite_sampler;
         tsb.texture = uv_texture;
         SDL_BindGPUFragmentSamplers(pass, 2, &tsb, 1);
     }
-    if (combine_sampler && voxel_texture)
+    if (composite_sampler && voxel_texture)
     {
         SDL_GPUTextureSamplerBinding tsb = {0};
-        tsb.sampler = combine_sampler;
+        tsb.sampler = composite_sampler;
         tsb.texture = voxel_texture;
         SDL_BindGPUFragmentSamplers(pass, 3, &tsb, 1);
     }
@@ -1189,11 +1134,11 @@ static void draw_combine()
         tsb.texture = shadow_texture;
         SDL_BindGPUFragmentSamplers(pass, 4, &tsb, 1);
     }
-    if (ssao_sampler && ssao_texture)
+    if (edge_sampler && edge_texture)
     {
         SDL_GPUTextureSamplerBinding tsb = {0};
-        tsb.sampler = ssao_sampler;
-        tsb.texture = ssao_texture;
+        tsb.sampler = edge_sampler;
+        tsb.texture = edge_texture;
         SDL_BindGPUFragmentSamplers(pass, 5, &tsb, 1);
     }
     SDL_PushGPUFragmentUniformData(commands, 0, &viewport, 8);
@@ -1253,13 +1198,13 @@ static void draw()
     {
         draw_opaque();
     }
-    if (ssao_pipeline && cube_vbo)
+    if (edge_pipeline && cube_vbo)
     {
-        draw_ssao();
+        draw_edge();
     }
-    if (combine_pipeline && cube_vbo)
+    if (composite_pipeline && cube_vbo)
     {
-        draw_combine();
+        draw_composite();
     }
     if (transparent_pipeline)
     {
@@ -1424,8 +1369,6 @@ int main(int argc, char** argv)
         SDL_Log("Failed to create swapchain: %s", SDL_GetError());
         return false;
     }
-    noise_init();
-    noise_ssao_kernel(ssao_kernel, SSAO_KERNEL_SIZE);
     load_atlas();
     load_shadow_pipeline();
     load_raycast_pipeline();
@@ -1433,8 +1376,8 @@ int main(int argc, char** argv)
     load_ui_pipeline();
     load_opaque_pipeline();
     load_transparent_pipeline();
-    load_combine_pipeline();
-    load_ssao_pipeline();
+    load_composite_pipeline();
+    load_edge_pipeline();
     create_samplers();
     create_textures();
     create_vbos();
@@ -1554,9 +1497,9 @@ int main(int argc, char** argv)
     {
         SDL_ReleaseGPUSampler(device, shadow_sampler);
     }
-    if (combine_pipeline)
+    if (composite_pipeline)
     {
-        SDL_ReleaseGPUGraphicsPipeline(device, combine_pipeline);
+        SDL_ReleaseGPUGraphicsPipeline(device, composite_pipeline);
     }
     if (position_texture)
     {
@@ -1570,29 +1513,21 @@ int main(int argc, char** argv)
     {
         SDL_ReleaseGPUTexture(device, voxel_texture);
     }
-    if (combine_sampler)
+    if (composite_sampler)
     {
-        SDL_ReleaseGPUSampler(device, combine_sampler);
+        SDL_ReleaseGPUSampler(device, composite_sampler);
     }
-    if (ssao_pipeline)
+    if (edge_pipeline)
     {
-        SDL_ReleaseGPUGraphicsPipeline(device, ssao_pipeline);
+        SDL_ReleaseGPUGraphicsPipeline(device, edge_pipeline);
     }
-    if (ssao_rotation_texture)
+    if (edge_sampler)
     {
-        SDL_ReleaseGPUTexture(device, ssao_rotation_texture);
+        SDL_ReleaseGPUSampler(device, edge_sampler);
     }
-    if (ssao_sampler)
+    if (edge_texture)
     {
-        SDL_ReleaseGPUSampler(device, ssao_sampler);
-    }
-    if (ssao_rotation_sampler)
-    {
-        SDL_ReleaseGPUSampler(device, ssao_rotation_sampler);
-    }
-    if (ssao_texture)
-    {
-        SDL_ReleaseGPUTexture(device, ssao_texture);
+        SDL_ReleaseGPUTexture(device, edge_texture);
     }
     if (device && window)
     {
