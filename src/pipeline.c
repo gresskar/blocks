@@ -252,7 +252,7 @@ static SDL_GPUGraphicsPipeline* composite(SDL_Window* window)
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
         .vertex_shader = load(device, "composite.vert", 0, 0),
-        .fragment_shader = load(device, "composite.frag", 5, 6),
+        .fragment_shader = load(device, "composite.frag", 3, 6),
         .target_info =
         {
             .num_color_targets = 1,

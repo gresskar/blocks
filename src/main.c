@@ -696,11 +696,9 @@ static void draw_composite()
         tsb.texture = edge_texture;
         SDL_BindGPUFragmentSamplers(pass, 5, &tsb, 1);
     }
-    SDL_PushGPUFragmentUniformData(commands, 0, &viewport, 8);
-    SDL_PushGPUFragmentUniformData(commands, 1, player_position, 12);
-    SDL_PushGPUFragmentUniformData(commands, 2, shadow_vector, 12);
-    SDL_PushGPUFragmentUniformData(commands, 3, shadow_camera.matrix, 64);
-    SDL_PushGPUFragmentUniformData(commands, 4, player_camera.view, 64);
+    SDL_PushGPUFragmentUniformData(commands, 0, player_position, 12);
+    SDL_PushGPUFragmentUniformData(commands, 1, shadow_vector, 12);
+    SDL_PushGPUFragmentUniformData(commands, 2, shadow_camera.matrix, 64);
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 6, 1, 0, 0);
     SDL_EndGPURenderPass(pass);

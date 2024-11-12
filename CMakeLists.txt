@@ -41,7 +41,7 @@ function(shader FILE)
         OUTPUT ${OUTPUT}
         COMMAND glslc ${SOURCE} -o ${OUTPUT} -I src
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        DEPENDS ${SOURCE} shaders/config.glsl src/config.h
+        DEPENDS ${SOURCE} shaders/helpers.glsl src/config.h
         BYPRODUCTS ${OUTPUT}
         COMMENT ${SOURCE}
     )

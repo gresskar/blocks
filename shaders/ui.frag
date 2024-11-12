@@ -1,24 +1,22 @@
 #version 450
 
-#include "config.glsl"
+#include "helpers.glsl"
 
 layout(location = 0) in vec2 i_uv;
 layout(location = 0) out vec4 o_color;
-layout(set = 2, binding = 0) uniform sampler2D u_atlas;
-layout(set = 3, binding = 0) uniform viewport_t
+layout(set = 2, binding = 0) uniform sampler2D s_atlas;
+layout(set = 3, binding = 0) uniform t_viewport
 {
-    ivec2 size;
-}
-u_viewport;
-layout(set = 3, binding = 1) uniform block_t
+    ivec2 u_viewport;
+};
+layout(set = 3, binding = 1) uniform t_block
 {
-    ivec2 uv;
-}
-u_block;
+    ivec2 u_block;
+};
 
 void main()
 {
-    const float aspect = float(u_viewport.size.x) / float(u_viewport.size.y);
+    const float aspect = float(u_viewport.x) / float(u_viewport.y);
     const float block_height = 0.05;
     const float block_width = block_height / aspect;
     const vec2 block_start = vec2(0.01);
@@ -28,11 +26,11 @@ void main()
     {
         const float x = (i_uv.x - block_start.x) / block_width;
         const float y = (i_uv.y - block_start.y) / block_height;
-        const float u = u_block.uv.x * ATLAS_FACE_WIDTH / ATLAS_WIDTH;
-        const float v = u_block.uv.y * ATLAS_FACE_HEIGHT / ATLAS_HEIGHT;
+        const float u = u_block.x * ATLAS_FACE_WIDTH / ATLAS_WIDTH;
+        const float v = u_block.y * ATLAS_FACE_HEIGHT / ATLAS_HEIGHT;
         const float c = u + x / ATLAS_X_FACES;
         const float d = v + (1.0 - y) / ATLAS_Y_FACES;
-        o_color = texture(u_atlas, vec2(c, d));
+        o_color = texture(s_atlas, vec2(c, d));
         o_color.xyz *= min(1.5, 2.0 - y);
         return;
     }

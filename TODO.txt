@@ -1,5 +1,6 @@
-- replace edge_texture with R8_INT or R8_UINT
+- replace edge with R8_INT or R8_UINT
   - https://github.com/libsdl-org/SDL/pull/11347
+- blur edge for ssao?
 - seeded world generation
 - text rendering
 - indirect rendering
