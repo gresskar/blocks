@@ -31,11 +31,10 @@ cd bin
 ```
 
 ### Controls
-- WASD to move
-- EQ to move up and down
-- Escape to unfocus
-- Left Click to break a block
-- Right Click to place a block
-- B to toggle blocks
-- F11 to toggle fullscreen
-- Left Control to go super speed
+- `WASDEQ` to move
+- `Escape` to unfocus
+- `LClick` to break a block
+- `RClick` to place a block
+- `B` to toggle blocks
+- `F11` to toggle fullscreen
+- `LControl` to sprint
