@@ -62,17 +62,8 @@ void main()
 
     // Compute shadow factor
     float shadow = 0.0;
-    if (should_shadow != 0) {
-        if (dot(normal, -u_shadow_camera.vector) < 0.0) {
-            shadow = world_shadow_factor;
-        } else if (
-            shadow_position.x <= 1.0 && shadow_position.x >= 0.0 &&
-            shadow_position.y <= 1.0 && shadow_position.y >= 0.0 &&
-            shadow_position.z <= 1.0 && shadow_position.z >= 0.0 &&
-            shadow_position.z - world_shadow_bias > texture(s_shadow, shadow_position.xy).r
-        ) {
-            shadow = world_shadow_factor;
-        }
+    if (should_shadow != 0 && get_shadow(normal, -u_shadow_camera.vector, shadow_position, s_shadow)) {
+        shadow = world_shadow_factor;
     }
 
     vec3 color = texture(s_atlas, uv).xyz;
@@ -81,5 +72,5 @@ void main()
     float edge_occlusion = (1.0 - texture(s_edge, i_uv).r) * 0.2;
     // o_color = vec4(vec3(edge_occlusion), 1.0);
     color *= edge_occlusion + world_ambient_light + world_shadow_factor - shadow;
-    o_color = mix(vec4(color, 1.0), vec4(sky_bottom_color, 1.0), fog);
+    o_color = mix(vec4(color, 1.0), vec4(get_sky(0.0), 1.0), fog);
 }

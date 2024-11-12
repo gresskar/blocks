@@ -19,18 +19,24 @@ const mat4 bias = mat4
     0.5, 0.5, 0.0, 1.0
 );
 
-
-const float tmp_near = 1.0;
-const float tmp_far = 500.0;
-
-float linearize(float z, float near, float far)
+vec3 get_sky(const float y)
 {
-    return near * far / (far - z * (far - near));
+    const float height = max(y - 0.2, 0.0);
+    return mix(vec3(0.4, 0.7, 1.0), vec3(0.7, 0.9, 1.0), height);
 }
 
-float reverseLinearizeDepth(float z, float near, float far)
+bool get_shadow(
+    const vec3 normal,
+    const vec3 camera,
+    const  vec3 position,
+    const sampler2D map)
 {
-    return (far * near) / (far - (far - near) * z);
+    return
+        (dot(normal, camera) < 0.0) || (
+        position.x <= 1.0 && position.x >= 0.0 &&
+        position.y <= 1.0 && position.y >= 0.0 &&
+        position.z <= 1.0 && position.z >= 0.0 &&
+        (position.z - 0.0005 > texture(map, position.xy).x));
 }
 
 #endif
