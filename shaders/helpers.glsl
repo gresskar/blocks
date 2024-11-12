@@ -64,6 +64,11 @@ float get_fog(const vec2 position, const vec2 camera)
     return pow(clamp(length(position - camera) / 400.0, 0.0, 1.0), 2.5);
 }
 
+float get_random(const vec2 position)
+{
+    return fract(sin(dot(position, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
 bool get_shadowed(
     const vec3 normal,
     const vec3 camera,

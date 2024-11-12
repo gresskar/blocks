@@ -27,10 +27,11 @@ void main()
     {
         for (int y = -kernel; y <= kernel; ++y)
         {
-            const uint neighbor_voxel = texture(s_voxel, i_uv + vec2(x, y) * size).x;
+            const vec2 random = vec2(get_random(i_uv + vec2(x, y)), get_random(i_uv - vec2(x, y))) * 0.01;
+            const uint neighbor_voxel = texture(s_voxel, i_uv + vec2(x, y) * size + random).x;
             const uint neighbor_direction = get_direction(neighbor_voxel);
-            const vec3 neighbor_position = texture(s_position, i_uv + vec2(x, y) * size).xyz;
-            const vec2 neighbor_uv = texture(s_uv, i_uv + vec2(x, y) * size).xy;
+            const vec3 neighbor_position = texture(s_position, i_uv + vec2(x, y) * size + random).xyz;
+            const vec2 neighbor_uv = texture(s_uv, i_uv + vec2(x, y) * size + random).xy;
             const vec3 neighbor_color = texture(s_atlas, neighbor_uv).xyz;
             if (length(neighbor_uv) == 0 ||
                 distance(color, neighbor_color) > 0.01 ||
