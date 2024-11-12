@@ -32,20 +32,15 @@ u_shadow;
 
 void main()
 {
-    const uint x = i_voxel >> VOXEL_X_OFFSET & VOXEL_X_MASK;
-    const uint y = i_voxel >> VOXEL_Y_OFFSET & VOXEL_Y_MASK;
-    const uint z = i_voxel >> VOXEL_Z_OFFSET & VOXEL_Z_MASK;
     const uint u = i_voxel >> VOXEL_U_OFFSET & VOXEL_U_MASK;
     const uint v = i_voxel >> VOXEL_V_OFFSET & VOXEL_V_MASK;
-    const uint direction = i_voxel >> VOXEL_DIRECTION_OFFSET & VOXEL_DIRECTION_MASK;
     o_shadow = i_voxel >> VOXEL_SHADOW_OFFSET & VOXEL_SHADOW_MASK;
-    ivec3 position = u_position.vector + ivec3(x, y, z);
+    vec3 position = u_position.vector + get_position(i_voxel);
     o_uv.x = u / ATLAS_WIDTH * ATLAS_FACE_WIDTH;
     o_uv.y = v / ATLAS_HEIGHT * ATLAS_FACE_HEIGHT;
     gl_Position = u_mvp.matrix * vec4(position, 1.0);
-    o_fog = abs(length(position.xz - u_camera.vector.xz));
-    o_fog = pow(clamp(o_fog / world_fog_distance, 0.0, 1.0), world_fog_factor);
-    o_normal = normals[direction];
+    o_fog = get_fog(position.xz, u_camera.vector.xz);
+    o_normal = get_normal(i_voxel);
     if (o_shadow != 0)
     {
         o_shadow_position = bias * u_shadow.matrix * vec4(position, 1.0);

@@ -52,25 +52,15 @@ void main()
     // Check if this voxel should cast a shadow
     uint should_shadow = (voxel >> VOXEL_SHADOW_OFFSET) & VOXEL_SHADOW_MASK;
 
-    // Compute fog factor based on distance to the camera's xz-plane position
-    float fog = abs(length(position.xz - u_player_camera.position.xz));
-    fog = pow(clamp(fog / world_fog_distance, 0.0, 1.0), world_fog_factor);
-
     // Calculate shadow coordinates
     vec4 shadow_position4 = bias * u_shadow.matrix * vec4(position, 1.0);
     vec3 shadow_position = shadow_position4.xyz / shadow_position4.w;
 
     // Compute shadow factor
-    float shadow = 0.0;
-    if (should_shadow != 0 && get_shadow(normal, -u_shadow_camera.vector, shadow_position, s_shadow)) {
-        shadow = world_shadow_factor;
-    }
+    bool shadow = should_shadow != 0 && get_shadow(normal, -u_shadow_camera.vector, shadow_position, s_shadow);
 
-    vec3 color = texture(s_atlas, uv).xyz;
-
-    // Sample edge detection result (0.0 for no edge, 1.0 for edge)
-    float edge_occlusion = (1.0 - texture(s_edge, i_uv).r) * 0.2;
-    // o_color = vec4(vec3(edge_occlusion), 1.0);
-    color *= edge_occlusion + world_ambient_light + world_shadow_factor - shadow;
-    o_color = mix(vec4(color, 1.0), vec4(get_sky(0.0), 1.0), fog);
+    vec4 color = texture(s_atlas, uv);
+    bool edge_occlusion = bool(texture(s_edge, i_uv).r);
+    float fog = get_fog(position.xz, u_player_camera.position.xz);
+    o_color = get_composite(color, shadow, edge_occlusion, fog);
 }

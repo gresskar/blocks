@@ -4,8 +4,6 @@
 #include "config.h"
 
 const float world_ambient_light = 0.3;
-const float world_fog_distance = 400.0;
-const float world_fog_factor = 2.5;
 const float world_shadow_bias = 0.0005;
 const float world_shadow_factor = 0.9;
 
