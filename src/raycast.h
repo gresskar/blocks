@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-bool physics_raycast(
+bool raycast(
     float* x,
     float* y,
     float* z,

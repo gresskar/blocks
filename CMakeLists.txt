@@ -21,7 +21,8 @@ add_executable(blocks WIN32
     src/helpers.c
     src/main.c
     src/noise.c
-    src/physics.c
+    src/pipeline.c
+    src/raycast.c
     src/voxmesh.c
     src/world.c
 )
@@ -34,14 +35,19 @@ target_include_directories(blocks PUBLIC lib/stb)
 set_target_properties(blocks PROPERTIES C_STANDARD 11)
 
 function(shader FILE)
-    string(REPLACE . _ NAME ${FILE})
     set(SOURCE shaders/${FILE})
     set(OUTPUT ${BINARY_DIR}/${FILE})
-    add_custom_target(${NAME} ALL
+    add_custom_command(
+        OUTPUT ${OUTPUT}
         COMMAND glslc ${SOURCE} -o ${OUTPUT} -I src
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         DEPENDS ${SOURCE} shaders/config.glsl src/config.h
-        BYPRODUCTS ${OUTPUT} COMMENT ${SOURCE})
+        BYPRODUCTS ${OUTPUT}
+        COMMENT ${SOURCE}
+    )
+    string(REPLACE . _ NAME ${FILE})
+    add_custom_target(${NAME} DEPENDS ${OUTPUT})
+    add_dependencies(blocks ${NAME})
 endfunction()
 shader(composite.frag)
 shader(composite.vert)

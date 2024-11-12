@@ -5,7 +5,7 @@
 
 #define APP_NAME "blocks"
 #define APP_VERSION "0.0.1"
-#define APP_ICON BLOCK_GRASS
+#define APP_ICON BLOCK_ROSE
 #define APP_VALIDATION 1
 #define WINDOW_WIDTH 1024
 #define WINDOW_HEIGHT 764

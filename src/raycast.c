@@ -1,11 +1,11 @@
 #include <stdbool.h>
-#include "config.h"
 #include "block.h"
+#include "config.h"
 #include "helpers.h"
-#include "physics.h"
+#include "raycast.h"
 #include "world.h"
 
-bool physics_raycast(
+bool raycast(
     float* x,
     float* y,
     float* z,

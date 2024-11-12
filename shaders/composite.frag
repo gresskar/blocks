@@ -75,7 +75,6 @@ void main()
         }
     }
 
-    // Sample color from the atlas texture
     vec3 color = texture(s_atlas, uv).xyz;
 
     // Sample edge detection result (0.0 for no edge, 1.0 for edge)
