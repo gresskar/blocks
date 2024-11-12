@@ -457,7 +457,7 @@ static void load_edge_pipeline()
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
         .vertex_shader = load_shader(device, "edge.vert", 0, 0),
-        .fragment_shader = load_shader(device, "edge.frag", 0, 3),
+        .fragment_shader = load_shader(device, "edge.frag", 0, 4),
         .target_info =
         {
             .num_color_targets = 1,
@@ -961,6 +961,13 @@ static void draw_edge()
         tsb.sampler = edge_sampler;
         tsb.texture = voxel_texture;
         SDL_BindGPUFragmentSamplers(pass, 2, &tsb, 1);
+    }
+    if (atlas_sampler && voxel_texture)
+    {
+        SDL_GPUTextureSamplerBinding tsb = {0};
+        tsb.sampler = edge_sampler;
+        tsb.texture = atlas_texture;
+        SDL_BindGPUFragmentSamplers(pass, 3, &tsb, 1);
     }
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 6, 1, 0, 0);
