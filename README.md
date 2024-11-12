@@ -9,6 +9,7 @@ Tiny Minecraft clone in C and GLSL using the new SDL3 GPU API
 - Procedural world generation
 - Blocks and plants
 - Basic shadow mapping
+- Rough SSAO approximation
 - Persistent worlds
 
 ### Download
@@ -37,4 +38,4 @@ cd bin
 - `RClick` to place a block
 - `B` to toggle blocks
 - `F11` to toggle fullscreen
-- `LControl` to sprint
+- `LControl` to move quickly

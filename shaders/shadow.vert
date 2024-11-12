@@ -14,7 +14,7 @@ layout(set = 1, binding = 1) uniform t_matrix
 
 void main()
 {
-    if (get_shadow(i_voxel) != 0)
+    if (get_shadow(i_voxel))
     {
         gl_Position = u_matrix * vec4(u_position + get_position(i_voxel), 1.0);
     }

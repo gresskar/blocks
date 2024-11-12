@@ -136,7 +136,7 @@ void noise_generate(
         }
         const float cloud = stb_perlin_turbulence_noise3(
             s * NOISE_CLOUD_FREQUENCY,
-            NOISE_CLOUD_Y * NOISE_CLOUD_FREQUENCY,
+            0.0f,
             t * NOISE_CLOUD_FREQUENCY,
             NOISE_LACUNARITY,
             NOISE_GAIN,
@@ -145,7 +145,7 @@ void noise_generate(
         {
             for (int y = 0; y < cloud * NOISE_CLOUD_THICKNESS; y++)
             {
-                group_set_block(group, a, NOISE_CLOUD_Y + y, b, BLOCK_CLOUD);
+                group_set_block(group, a, NOISE_CLOUD_Y - y, b, BLOCK_CLOUD);
             }
         }
     }

@@ -38,6 +38,16 @@ static uint64_t time1;
 static uint64_t time2;
 static block_t current_block = BLOCK_GRASS;
 
+#ifndef NDEBUG
+#define VALIDATION 1
+#define validation_begin(n) SDL_PushGPUDebugGroup(commands, n)
+#define validation_end() SDL_PopGPUDebugGroup(commands)
+#else
+#define VALIDATION 0
+#define validation_begin(n)
+#define validation_end()
+#endif
+
 static bool create_atlas()
 {
     int w;
@@ -658,14 +668,30 @@ static void draw()
     }
     camera_update(&player_camera);
     camera_update(&shadow_camera);
+    validation_begin("sky");
     draw_sky();
+    validation_end();
+    validation_begin("shadow");
     draw_shadow();
+    validation_end();
+    validation_begin("opaque");
     draw_opaque();
+    validation_end();
+    validation_begin("ssao");
     draw_ssao();
+    validation_end();
+    validation_begin("composite");
     draw_composite();
+    validation_end();
+    validation_begin("transparent");
     draw_transparent();
+    validation_end();
+    validation_begin("raycast");
     draw_raycast();
+    validation_end();
+    validation_begin("ui");
     draw_ui();
+    validation_end();
     SDL_SubmitGPUCommandBuffer(commands);
 }
 
@@ -759,7 +785,7 @@ static void move(const float dt)
     z -= state[BUTTON_BACKWARD];
     if (state[BUTTON_SPRINT])
     {
-        speed = PLAYER_SUPER_SPEED;
+        speed = PLAYER_SPRINT_SPEED;
     }
     x *= speed * dt;
     y *= speed * dt;
@@ -798,13 +824,13 @@ int main(int argc, char** argv)
         SDL_Log("Failed to initialize SDL: %s", SDL_GetError());
         return EXIT_FAILURE;
     }
-    window = SDL_CreateWindow(WINDOW_TITLE, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+    window = SDL_CreateWindow(APP_NAME, APP_WIDTH, APP_HEIGHT, 0);
     if (!window)
     {
         SDL_Log("Failed to create window: %s", SDL_GetError());
         return EXIT_FAILURE;
     }
-    device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, APP_VALIDATION, NULL);
+    device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, VALIDATION, NULL);
     if (!device)
     {
         SDL_Log("Failed to create device: %s", SDL_GetError());
@@ -860,7 +886,7 @@ int main(int argc, char** argv)
     float pitch;
     float yaw;
     camera_init(&player_camera, false);
-    camera_viewport(&player_camera, WINDOW_WIDTH, WINDOW_HEIGHT);
+    camera_viewport(&player_camera, APP_WIDTH, APP_HEIGHT);
     if (database_get_player(DATABASE_PLAYER, &x, &y, &z, &pitch, &yaw))
     {
         camera_set_position(&player_camera, x, y, z);

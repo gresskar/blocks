@@ -3,7 +3,7 @@
 #include "helpers.glsl"
 
 layout(location = 0) in vec2 i_uv;
-layout(location = 1) in vec3 i_normal;
+layout(location = 1) in flat vec3 i_normal;
 layout(location = 2) in vec4 i_shadow_position;
 layout(location = 3) in flat uint i_shadow;
 layout(location = 4) in float i_fog;

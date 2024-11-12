@@ -13,7 +13,7 @@ const vec3 normals[6] = vec3[6]
     vec3( 0,-1, 0)
 );
 
-const mat4 bias = mat4
+const mat4 bias_matrix = mat4
 (
     0.5, 0.0, 0.0, 0.0,
     0.0,-0.5, 0.0, 0.0,
@@ -39,9 +39,9 @@ vec2 get_uv(const uint voxel)
         uv.y / ATLAS_HEIGHT * ATLAS_FACE_HEIGHT);
 }
 
-uint get_shadow(const uint voxel)
+bool get_shadow(const uint voxel)
 {
-    return voxel >> VOXEL_SHADOW_OFFSET & VOXEL_SHADOW_MASK;
+    return bool(voxel >> VOXEL_SHADOW_OFFSET & VOXEL_SHADOW_MASK);
 }
 
 uint get_direction(const uint voxel)
@@ -56,7 +56,7 @@ vec3 get_normal(const uint voxel)
 
 vec3 get_sky(const float y)
 {
-    return mix(vec3(0.4, 0.7, 1.0), vec3(0.7, 0.9, 1.0), max(y - 0.2, 0.0));
+    return mix(vec3(0.3, 0.6, 0.9), vec3(0.8, 0.95, 1.0), max(y - 0.3, 0.0));
 }
 
 float get_fog(const vec2 position, const vec2 camera)

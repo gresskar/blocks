@@ -1,11 +1,16 @@
-- noise for ssao
+- replace cover image
+- performance
+  - shadow depth rendering takes half the frame time
+    - shadow cascades
+  - precalculate ssao randomness
+  - indirect rendering
+- linearize shadow depths
 - seeded world generation
 - text rendering
-- indirect rendering
-- shadow cascades
 - collision
 - chunk transparency
 - chunk paging
+- day night cycle
 - multisampling
 - fix near plane clipping
 - fix texture bleeding
