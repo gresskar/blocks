@@ -204,12 +204,12 @@ static SDL_GPUGraphicsPipeline* opaque(SDL_Window* window)
     return pipeline;
 }
 
-static SDL_GPUGraphicsPipeline* edge(SDL_Window* window)
+static SDL_GPUGraphicsPipeline* ssao(SDL_Window* window)
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = load(device, "edge.vert", 0, 0),
-        .fragment_shader = load(device, "edge.frag", 0, 4),
+        .vertex_shader = load(device, "ssao.vert", 0, 0),
+        .fragment_shader = load(device, "ssao.frag", 0, 4),
         .target_info =
         {
             .num_color_targets = 1,
@@ -240,7 +240,7 @@ static SDL_GPUGraphicsPipeline* edge(SDL_Window* window)
     }
     if (!pipeline)
     {
-        SDL_Log("Failed to create edge pipeline: %s", SDL_GetError());
+        SDL_Log("Failed to create ssao pipeline: %s", SDL_GetError());
     }
     SDL_ReleaseGPUShader(device, info.vertex_shader);
     SDL_ReleaseGPUShader(device, info.fragment_shader);
@@ -479,7 +479,7 @@ bool pipeline_init(
     pipelines[PIPELINE_SKY] = sky(window);
     pipelines[PIPELINE_SHADOW] = shadow(window);
     pipelines[PIPELINE_OPAQUE] = opaque(window);
-    pipelines[PIPELINE_EDGE] = edge(window);
+    pipelines[PIPELINE_SSAO] = ssao(window);
     pipelines[PIPELINE_COMPOSITE] = composite(window);
     pipelines[PIPELINE_TRANSPARENT] = transparent(window);
     pipelines[PIPELINE_RAYCAST] = raycast(window);

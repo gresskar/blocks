@@ -98,14 +98,13 @@ bool get_edge(
 vec4 get_color(
     const vec4 color,
     const bool shadow,
-    const bool edge,
+    const float ssao,
     const float fog)
 {
-    const float a = edge ? 0.0 : shadow ? 0.03 : 0.06;
-    const float b = 0.3;
-    const float c = shadow ? 0.0 : 1.0;
-    const vec3 d = color.xyz * (a + b + c);
-    return mix(vec4(d, color.a), vec4(get_sky(0.0), 1.0), fog);
+    const float a = shadow ? ssao * 0.15 : ssao * 0.4;
+    const float b = shadow ? 0.0 : 0.5;
+    const vec3 c = color.xyz * (a + b + 0.3);
+    return mix(vec4(c, color.a), vec4(get_sky(0.0), 1.0), fog);
 }
 
 #endif

@@ -26,7 +26,7 @@ static SDL_GPUTexture* shadow_texture;
 static SDL_GPUTexture* position_texture;
 static SDL_GPUTexture* uv_texture;
 static SDL_GPUTexture* voxel_texture;
-static SDL_GPUTexture* edge_texture;
+static SDL_GPUTexture* ssao_texture;
 static SDL_GPUTexture* atlas_texture;
 static SDL_GPUSampler* nearest_sampler;
 static SDL_GPUSampler* linear_sampler;
@@ -180,10 +180,10 @@ static bool resize_textures(const uint32_t width, const uint32_t height)
         SDL_ReleaseGPUTexture(device, voxel_texture);
         voxel_texture = NULL;
     }
-    if (edge_texture)
+    if (ssao_texture)
     {
-        SDL_ReleaseGPUTexture(device, edge_texture);
-        edge_texture = NULL;
+        SDL_ReleaseGPUTexture(device, ssao_texture);
+        ssao_texture = NULL;
     }
     SDL_GPUTextureCreateInfo tci = {0};
     tci.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET;
@@ -225,10 +225,10 @@ static bool resize_textures(const uint32_t width, const uint32_t height)
     }
     tci.usage = SDL_GPU_TEXTUREUSAGE_COLOR_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
     tci.format = SDL_GPU_TEXTUREFORMAT_R32_FLOAT;
-    edge_texture = SDL_CreateGPUTexture(device, &tci);
-    if (!edge_texture)
+    ssao_texture = SDL_CreateGPUTexture(device, &tci);
+    if (!ssao_texture)
     {
-        SDL_Log("Failed to create edge texture: %s", SDL_GetError());
+        SDL_Log("Failed to create ssao texture: %s", SDL_GetError());
         return false;
     }
     return true;
@@ -453,13 +453,13 @@ static void draw_opaque()
     SDL_EndGPURenderPass(pass);
 }
 
-static void draw_edge()
+static void draw_ssao()
 {
     SDL_GPUColorTargetInfo cti = {0};
     cti.clear_color = (SDL_FColor) { 0.0f, 0.0f, 0.0f, 0.0f };
     cti.load_op = SDL_GPU_LOADOP_CLEAR;
     cti.store_op = SDL_GPU_STOREOP_STORE;
-    cti.texture = edge_texture;
+    cti.texture = ssao_texture;
     cti.cycle = true;
     SDL_GPURenderPass* pass = SDL_BeginGPURenderPass(commands, &cti, 1, NULL);
     if (!pass)
@@ -478,7 +478,7 @@ static void draw_edge()
     tsb[2].texture = voxel_texture;
     tsb[3].sampler = nearest_sampler;
     tsb[3].texture = atlas_texture;
-    pipeline_bind(pass, PIPELINE_EDGE);
+    pipeline_bind(pass, PIPELINE_SSAO);
     SDL_BindGPUFragmentSamplers(pass, 0, tsb, 4);
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 6, 1, 0, 0);
@@ -513,7 +513,7 @@ static void draw_composite()
     tsb[4].sampler = linear_sampler;
     tsb[4].texture = shadow_texture;
     tsb[5].sampler = nearest_sampler;
-    tsb[5].texture = edge_texture;
+    tsb[5].texture = ssao_texture;
     camera_get_position(&player_camera, &position[0], &position[1], &position[2]);
     camera_vector(&shadow_camera, &vector[0], &vector[1], &vector[2]);
     pipeline_bind(pass, PIPELINE_COMPOSITE);
@@ -661,7 +661,7 @@ static void draw()
     draw_sky();
     draw_shadow();
     draw_opaque();
-    draw_edge();
+    draw_ssao();
     draw_composite();
     draw_transparent();
     draw_raycast();
@@ -917,9 +917,9 @@ int main(int argc, char** argv)
     {
         SDL_ReleaseGPUTexture(device, voxel_texture);
     }
-    if (edge_texture)
+    if (ssao_texture)
     {
-        SDL_ReleaseGPUTexture(device, edge_texture);
+        SDL_ReleaseGPUTexture(device, ssao_texture);
     }
     SDL_ReleaseGPUBuffer(device, cube_vbo);
     SDL_ReleaseGPUBuffer(device, quad_vbo);
