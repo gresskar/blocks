@@ -7,6 +7,7 @@
 #define APP_VERSION "0.0.1"
 #define APP_WIDTH 1024
 #define APP_HEIGHT 764
+#define APP_VALIDATION 1
 #define APP_ICON BLOCK_ROSE
 
 #define ATLAS_WIDTH 256.0
@@ -22,7 +23,8 @@
 #define PLAYER_SENSITIVITY 0.1f
 #define PLAYER_Y 60
 
-#define SHADOW_SIZE 4096
+#define SHADOW_WIDTH 4096
+#define SHADOW_HEIGHT 4096
 #define SHADOW_Y 30.0f
 #define SHADOW_PITCH (-PI / 4.0f)
 #define SHADOW_YAW (PI / 8.0f)
@@ -109,5 +111,11 @@
 #define BUTTON_FULLSCREEN SDL_SCANCODE_F11
 #define BUTTON_PLACE SDL_BUTTON_RMASK
 #define BUTTON_BREAK SDL_BUTTON_LMASK
+
+#define DRAW_NORMALS 0
+#define DRAW_SSAO 0
+#define DRAW_LIGHTS 0
+#define DRAW_COLORS 0
+#define DRAW_SHADOWED 0
 
 #endif

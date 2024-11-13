@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <time.h>
 #include "block.h"
 #include "camera.h"
 #include "database.h"
@@ -37,16 +38,6 @@ static camera_t shadow_camera;
 static uint64_t time1;
 static uint64_t time2;
 static block_t current_block = BLOCK_GRASS;
-
-#ifndef NDEBUG
-#define VALIDATION 1
-#define validation_begin(n) SDL_PushGPUDebugGroup(commands, n)
-#define validation_end() SDL_PopGPUDebugGroup(commands)
-#else
-#define VALIDATION 0
-#define validation_begin(n)
-#define validation_end()
-#endif
 
 static bool create_atlas()
 {
@@ -126,24 +117,24 @@ static bool create_atlas()
 static bool create_samplers()
 {
     SDL_GPUSamplerCreateInfo sci = {0};
-    sci.min_filter = SDL_GPU_FILTER_NEAREST;
-    sci.mag_filter = SDL_GPU_FILTER_NEAREST;
+    sci.min_filter = SDL_GPU_FILTER_LINEAR;
+    sci.mag_filter = SDL_GPU_FILTER_LINEAR;
     sci.mipmap_mode = SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
     sci.address_mode_u = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
     sci.address_mode_v = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
     sci.address_mode_w = SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-    nearest_sampler = SDL_CreateGPUSampler(device, &sci);
-    if (!nearest_sampler)
-    {
-        SDL_Log("Failed to create atlas sampler: %s", SDL_GetError());
-        return false;
-    }
-    sci.min_filter = SDL_GPU_FILTER_LINEAR;
-    sci.mag_filter = SDL_GPU_FILTER_LINEAR;
     linear_sampler = SDL_CreateGPUSampler(device, &sci);
     if (!linear_sampler)
     {
-        SDL_Log("Failed to create shadow sampler: %s", SDL_GetError());
+        SDL_Log("Failed to create linear sampler: %s", SDL_GetError());
+        return false;
+    }
+    sci.min_filter = SDL_GPU_FILTER_NEAREST;
+    sci.mag_filter = SDL_GPU_FILTER_NEAREST;
+    nearest_sampler = SDL_CreateGPUSampler(device, &sci);
+    if (!nearest_sampler)
+    {
+        SDL_Log("Failed to create nearest sampler: %s", SDL_GetError());
         return false;
     }
     return true;
@@ -155,8 +146,8 @@ static bool create_textures()
     tci.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
     tci.type = SDL_GPU_TEXTURETYPE_2D;
     tci.format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
-    tci.width = SHADOW_SIZE;
-    tci.height = SHADOW_SIZE;
+    tci.width = SHADOW_WIDTH;
+    tci.height = SHADOW_HEIGHT;
     tci.layer_count_or_depth = 1;
     tci.num_levels = 1;
     shadow_texture = SDL_CreateGPUTexture(device, &tci);
@@ -668,30 +659,14 @@ static void draw()
     }
     camera_update(&player_camera);
     camera_update(&shadow_camera);
-    validation_begin("sky");
     draw_sky();
-    validation_end();
-    validation_begin("shadow");
     draw_shadow();
-    validation_end();
-    validation_begin("opaque");
     draw_opaque();
-    validation_end();
-    validation_begin("ssao");
     draw_ssao();
-    validation_end();
-    validation_begin("composite");
     draw_composite();
-    validation_end();
-    validation_begin("transparent");
     draw_transparent();
-    validation_end();
-    validation_begin("raycast");
     draw_raycast();
-    validation_end();
-    validation_begin("ui");
     draw_ui();
-    validation_end();
     SDL_SubmitGPUCommandBuffer(commands);
 }
 
@@ -830,7 +805,7 @@ int main(int argc, char** argv)
         SDL_Log("Failed to create window: %s", SDL_GetError());
         return EXIT_FAILURE;
     }
-    device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, VALIDATION, NULL);
+    device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, APP_VALIDATION, NULL);
     if (!device)
     {
         SDL_Log("Failed to create device: %s", SDL_GetError());

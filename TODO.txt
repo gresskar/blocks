@@ -1,8 +1,6 @@
-- performance
-  - shadow pass takes over half the frame time
-    - shadow cascades
-  - precalculate ssao randomness
-  - indirect rendering
+- improve ssao performance
+- more blocks
+- shadow cascades
 - seeded world generation
 - text rendering
 - collision

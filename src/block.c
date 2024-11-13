@@ -19,7 +19,6 @@ bool block_solid(const block_t block)
     switch (block)
     {
     case BLOCK_BLUEBELL:
-    case BLOCK_CLOUD:
     case BLOCK_DANDELION:
     case BLOCK_EMPTY:
     case BLOCK_LAVENDER:

@@ -33,10 +33,11 @@ void main()
         discard;
     }
     const vec4 shadow_position = bias * u_shadow_matrix * vec4(position, 1.0);
-    const bool shadowed = get_shadow(voxel) && get_shadowed(get_normal(voxel),
-        -u_shadow_vector, shadow_position.xyz / shadow_position.w, s_shadow);
+    const vec3 normal = get_normal(voxel);
+    const bool shadowed = get_shadow(voxel) && get_shadowed(normal,
+        u_shadow_vector, shadow_position.xyz / shadow_position.w, s_shadow);
     const vec4 color = texture(s_atlas, uv);
     const float ssao = texture(s_ssao, i_uv).r;
     const float fog = get_fog(position.xz, u_player_position.xz);
-    o_color = get_color(color, shadowed, ssao, fog);
+    o_color = get_color(color, shadowed, ssao, fog, normal, u_shadow_vector);
 }
