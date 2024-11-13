@@ -1,10 +1,8 @@
-- replace cover image
 - performance
-  - shadow depth rendering takes half the frame time
+  - shadow pass takes over half the frame time
     - shadow cascades
   - precalculate ssao randomness
   - indirect rendering
-- linearize shadow depths
 - seeded world generation
 - text rendering
 - collision

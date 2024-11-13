@@ -8,8 +8,8 @@ Tiny Minecraft clone in C and GLSL using the new SDL3 GPU API
 
 - Procedural world generation
 - Blocks and plants
-- Basic shadow mapping
-- Rough SSAO approximation
+- Directional shadow mapping
+- SSAO approximation
 - Persistent worlds
 
 ### Download
