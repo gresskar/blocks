@@ -26,24 +26,11 @@ void main()
     {
         const float x = (i_uv.x - block_start.x) / block_width;
         const float y = (i_uv.y - block_start.y) / block_height;
-        const float u = u_block.x * ATLAS_FACE_WIDTH / ATLAS_WIDTH;
-        const float v = u_block.y * ATLAS_FACE_HEIGHT / ATLAS_HEIGHT;
-        const float c = u + x / ATLAS_X_FACES;
-        const float d = v + (1.0 - y) / ATLAS_Y_FACES;
+        const vec2 uv = get_atlas(u_block);
+        const float c = uv.x + x / ATLAS_X_FACES;
+        const float d = uv.y + (1.0 - y) / ATLAS_Y_FACES;
         o_color = texture(s_atlas, vec2(c, d));
         o_color.xyz *= min(1.5, 2.0 - y);
-        return;
-    }
-    const float outline_thickness = 0.002;
-    const float outline_width = outline_thickness / aspect;
-    const vec2 outline_start = block_start - vec2(outline_width, outline_thickness);
-    const vec2 outline_end = block_end + vec2(outline_width, outline_thickness);
-    if (i_uv.x > outline_start.x && i_uv.x < outline_end.x &&
-        i_uv.y > outline_start.y && i_uv.y < outline_end.y)
-    {
-        const float x = (i_uv.x - outline_start.x) / block_width;
-        const float y = (i_uv.y - outline_start.y) / block_height;
-        o_color = vec4(vec3(1.5 - y), 1.0);
         return;
     }
     const float cross_size1 = 0.01;

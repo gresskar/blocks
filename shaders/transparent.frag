@@ -19,7 +19,7 @@ void main()
 {
     const vec4 block = texture(s_atlas, i_uv);
     const vec3 position = i_shadow_position.xyz / i_shadow_position.w;
-    const bool shadow = i_shadow != 0 && get_shadowed(i_normal,
+    const bool shadowed = i_shadow != 0 && get_shadowed(i_normal,
         -u_shadow_vector, position, s_shadow);
-    o_color = get_color(block, shadow, 1.0, i_fog);
+    o_color = get_color(block, shadowed, 1.0, i_fog);
 }

@@ -36,6 +36,6 @@ void main()
     {
         return;
     }
-    o_shadow_position = bias_matrix * u_shadow_matrix * vec4(position, 1.0);
+    o_shadow_position = bias * u_shadow_matrix * vec4(position, 1.0);
     o_normal = get_normal(i_voxel);
 }

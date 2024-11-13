@@ -13,13 +13,33 @@ const vec3 normals[6] = vec3[6]
     vec3( 0,-1, 0)
 );
 
-const mat4 bias_matrix = mat4
+const mat4 bias = mat4
 (
-    0.5, 0.0, 0.0, 0.0,
-    0.0,-0.5, 0.0, 0.0,
-    0.0, 0.0, 1.0, 0.0,
-    0.5, 0.5, 0.0, 1.0
+    0.5,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+   -0.5,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    1.0,
+    0.0,
+    0.5,
+    0.5,
+    0.0,
+    1.0
 );
+
+vec2 get_atlas(const vec2 position)
+{
+    vec2 uv;
+    uv.x = position.x / ATLAS_WIDTH * ATLAS_FACE_WIDTH;
+    uv.y = position.y / ATLAS_HEIGHT * ATLAS_FACE_HEIGHT;
+    return uv;
+}
 
 vec3 get_position(const uint voxel)
 {
@@ -34,9 +54,7 @@ vec2 get_uv(const uint voxel)
     const vec2 uv = vec2(
         voxel >> VOXEL_U_OFFSET & VOXEL_U_MASK,
         voxel >> VOXEL_V_OFFSET & VOXEL_V_MASK);
-    return vec2(
-        uv.x / ATLAS_WIDTH * ATLAS_FACE_WIDTH,
-        uv.y / ATLAS_HEIGHT * ATLAS_FACE_HEIGHT);
+    return get_atlas(uv);
 }
 
 bool get_shadow(const uint voxel)
@@ -77,9 +95,8 @@ bool get_shadowed(
 {
     return
         (dot(normal, camera) < 0.0) || (
-        position.x <= 1.0 && position.x >= 0.0 &&
-        position.y <= 1.0 && position.y >= 0.0 &&
-        position.z <= 1.0 && position.z >= 0.0 &&
+        all(greaterThanEqual(position, vec3(0.0))) &&
+        all(lessThanEqual(position, vec3(1.0))) &&
         (position.z - 0.0005 > texture(map, position.xy).x));
 }
 
@@ -102,14 +119,15 @@ bool get_edge(
 
 vec4 get_color(
     const vec4 color,
-    const bool shadow,
+    const bool shadowed,
     const float ssao,
     const float fog)
 {
-    const float a = shadow ? ssao * 0.15 : ssao * 0.4;
-    const float b = shadow ? 0.0 : 0.5;
+    const float a = shadowed ? ssao * 0.15 : ssao * 0.4;
+    const float b = shadowed ? 0.0 : 0.5;
     const vec3 c = color.xyz * (a + b + 0.3);
-    return mix(vec4(c, color.a), vec4(get_sky(0.0), 1.0), fog);
+    const vec3 d = get_sky(0.0);
+    return mix(vec4(c, color.a), vec4(d, 1.0), fog);
 }
 
 #endif
