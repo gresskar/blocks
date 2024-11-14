@@ -1,5 +1,3 @@
-// glslc: warning: '#pragma once' : not implemented
-
 #ifndef CONFIG_H
 #define CONFIG_H
 
@@ -94,7 +92,7 @@
 #define NOISE_CLOUD_FREQUENCY 0.02f
 #define NOISE_CLOUD_THRESHOLD 0.4f
 #define NOISE_CLOUD_THICKNESS 4
-#define NOISE_CLOUD_CLEARANCE 10
+#define NOISE_CLOUD_CLEARANCE 20
 #define NOISE_PLANT_FREQUENCY 0.2f
 #define NOISE_TREE_THRESHOLD 0.5f
 #define NOISE_FLOWER_THRESHOLD 0.3f

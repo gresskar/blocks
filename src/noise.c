@@ -143,7 +143,8 @@ void noise_generate(
             NOISE_OCTAVES);
         if (cloud > NOISE_CLOUD_THRESHOLD && NOISE_CLOUD_Y > height + NOISE_CLOUD_CLEARANCE)
         {
-            for (int y = 0; y < cloud * NOISE_CLOUD_THICKNESS; y++)
+            const int thickness = cloud * NOISE_CLOUD_THICKNESS;
+            for (int y = -thickness; y < thickness; y++)
             {
                 group_set_block(group, a, NOISE_CLOUD_Y - y, b, BLOCK_CLOUD);
             }

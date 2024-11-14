@@ -844,7 +844,7 @@ int main(int argc, char** argv)
     if (!database_init(DATABASE_PATH))
     {
         SDL_Log("Failed to create database");
-        return false;
+        return EXIT_FAILURE;
     }
     if (!world_init(device))
     {
