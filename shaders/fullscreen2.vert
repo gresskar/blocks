@@ -1,11 +1,9 @@
+// modified from:
+// https://github.com/SaschaWillems/Vulkan/blob/master/shaders/glsl/ssao/fullscreen.vert
+
 #version 450
 
 layout(location = 0) out vec2 o_uv;
-
-out gl_PerVertex
-{
-    vec4 gl_Position;
-};
 
 void main() 
 {

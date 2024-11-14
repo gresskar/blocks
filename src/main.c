@@ -35,9 +35,9 @@ static SDL_Surface* atlas_surface;
 static void* atlas_data;
 static camera_t player_camera;
 static camera_t shadow_camera;
+static block_t current_block = BLOCK_GRASS;
 static uint64_t time1;
 static uint64_t time2;
-static block_t current_block = BLOCK_GRASS;
 
 static bool create_atlas()
 {
@@ -655,6 +655,7 @@ static void draw()
             return;
         }
     }
+    camera_viewport(&player_camera, w, h);
     camera_update(&player_camera);
     camera_update(&shadow_camera);
     draw_sky();
@@ -675,9 +676,6 @@ static bool poll()
     {
         switch (event.type)
         {
-        case SDL_EVENT_WINDOW_RESIZED:
-            camera_viewport(&player_camera, event.window.data1, event.window.data2);
-            break;
         case SDL_EVENT_MOUSE_MOTION:
             if (SDL_GetWindowRelativeMouseMode(window))
             {

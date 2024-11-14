@@ -190,6 +190,10 @@ void camera_viewport(
     assert(camera);
     assert(width > 0.0f);
     assert(height > 0.0f);
+    if (camera->width == width && camera->height == height)
+    {
+        return;
+    }
     camera->width = width;
     camera->height = height;
     camera->dirty = true;

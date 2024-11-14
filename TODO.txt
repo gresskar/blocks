@@ -1,4 +1,5 @@
 - improve ssao performance
+- instanced or indirect rendering
 - more blocks
 - shadow cascades
 - seeded world generation
