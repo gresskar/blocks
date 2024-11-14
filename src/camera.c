@@ -237,6 +237,10 @@ void camera_set_position(
     const float z)
 {
     assert(camera);
+    if (camera->x == x && camera->y == y && camera->z == z)
+    {
+        return;
+    }
     camera->x = x;
     camera->y = y;
     camera->z = z;
@@ -264,6 +268,10 @@ void camera_set_rotation(
     const float yaw)
 {
     assert(camera);
+    if (camera->pitch == pitch && camera->yaw == yaw)
+    {
+        return;
+    }
     const float e = PI / 2.0f - EPSILON;
     camera->pitch = clamp(pitch, -e, e);
     camera->yaw = yaw;
