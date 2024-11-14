@@ -148,8 +148,8 @@ void camera_init(
     camera->height = 480.0f;
     camera->fov = rad(90.0f);
     camera->near = 1.0f;
-    camera->far = 500.0f;
-    camera->size = 360.0f;
+    camera->far = 300.0f;
+    camera->size = 300.0f;
     camera->ortho = ortho;
     camera->dirty = true;
 }

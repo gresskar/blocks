@@ -74,12 +74,12 @@ vec3 get_normal(const uint voxel)
 
 vec3 get_sky(const float y)
 {
-    return mix(vec3(0.3, 0.6, 0.9), vec3(0.8, 0.95, 1.0), max(y - 0.3, 0.0));
+    return mix(vec3(0.3, 0.6, 0.9), vec3(0.8, 0.95, 1.0), max(y - 0.5, 0.0));
 }
 
 float get_fog(const vec2 position, const vec2 camera)
 {
-    return pow(clamp(length(position - camera) / 400.0, 0.0, 1.0), 2.5);
+    return pow(clamp(length(position - camera) / 250.0, 0.0, 1.0), 2.5);
 }
 
 float get_random(const vec2 position)
@@ -157,11 +157,11 @@ vec4 get_color(
     }
     else
     {
-        a = ssao * 0.4;
-        b = 0.2;
-        c = light * 0.7;
+        a = ssao * 0.3;
+        b = 0.4;
+        c = light * 0.6;
     }
-    const vec4 composite = vec4(color.xyz * (a + b + c + 0.4), color.a);
+    const vec4 composite = vec4(color.xyz * (a + b + c + 0.3), color.a);
     const vec4 sky = vec4(get_sky(0.0), 1.0);
     return mix(composite, sky, fog);
 }

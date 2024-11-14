@@ -209,7 +209,7 @@ static SDL_GPUGraphicsPipeline* ssao(SDL_Window* window)
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
         .vertex_shader = load(device, "ssao.vert", 0, 0),
-        .fragment_shader = load(device, "ssao.frag", 0, 4),
+        .fragment_shader = load(device, "ssao.frag", 0, 3),
         .target_info =
         {
             .num_color_targets = 1,

@@ -470,17 +470,15 @@ static void draw_ssao()
     }
     SDL_GPUBufferBinding bb = {0};
     bb.buffer = quad_vbo;
-    SDL_GPUTextureSamplerBinding tsb[4] = {0};
+    SDL_GPUTextureSamplerBinding tsb[3] = {0};
     tsb[0].sampler = nearest_sampler;
     tsb[0].texture = position_texture;
     tsb[1].sampler = nearest_sampler;
     tsb[1].texture = uv_texture;
     tsb[2].sampler = nearest_sampler;
     tsb[2].texture = voxel_texture;
-    tsb[3].sampler = nearest_sampler;
-    tsb[3].texture = atlas_texture;
     pipeline_bind(pass, PIPELINE_SSAO);
-    SDL_BindGPUFragmentSamplers(pass, 0, tsb, 4);
+    SDL_BindGPUFragmentSamplers(pass, 0, tsb, 3);
     SDL_BindGPUVertexBuffers(pass, 0, &bb, 1);
     SDL_DrawGPUPrimitives(pass, 6, 1, 0, 0);
     SDL_EndGPURenderPass(pass);
@@ -639,9 +637,9 @@ static void draw()
         SDL_Log("Failed to aqcuire swapchain image: %s", SDL_GetError());
         return;
     }
-    if (w == 0 || h == 0)
+    if (!color_texture || w == 0 || h == 0)
     {
-        SDL_SubmitGPUCommandBuffer(commands);
+        SDL_CancelGPUCommandBuffer(commands);
         return;
     }
     if (width != w || height != h)
