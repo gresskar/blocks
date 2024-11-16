@@ -13,6 +13,6 @@ layout(set = 1, binding = 1) uniform t_position
 
 void main()
 {
-    o_position = i_position * 1.05/ 2.0 + vec3(0.5, 0.5, 0.5);
+    o_position = i_position * 1.05 / 2.0 + vec3(0.5, 0.5, 0.5);
     gl_Position = u_matrix * vec4(u_position + o_position, 1.0);
 }

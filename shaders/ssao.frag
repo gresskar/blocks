@@ -8,6 +8,23 @@ layout(set = 2, binding = 0) uniform sampler2D s_position;
 layout(set = 2, binding = 1) uniform sampler2D s_uv;
 layout(set = 2, binding = 2) uniform usampler2D s_voxel;
 
+bool get_edge(
+    const uint direction,
+    const vec3 position,
+    const vec3 neighbor)
+{
+    switch (direction)
+    {
+    case 4: return position.y < neighbor.y;
+    case 5: return position.y > neighbor.y;
+    case 2: return position.x > neighbor.x;
+    case 3: return position.x < neighbor.x;
+    case 0: return position.z < neighbor.z;
+    case 1: return position.z > neighbor.z;
+    }
+    return false;
+}
+
 void main()
 {
     const vec2 uv = texture(s_uv, i_uv).xy;
@@ -25,11 +42,12 @@ void main()
     {
         for (int y = -kernel; y <= kernel; ++y)
         {
-            const vec2 random = vec2(get_random(i_uv + vec2(x, y))) * 0.01;
-            const uint neighbor_voxel = texture(s_voxel, i_uv + vec2(x, y) * size + random).x;
+            const vec2 origin = i_uv + vec2(x, y) * size;
+            const vec2 random = origin + vec2(get_random(origin)) * 0.01;
+            const uint neighbor_voxel = texture(s_voxel, random).x;
             const uint neighbor_direction = get_direction(neighbor_voxel);
-            const vec3 neighbor_position = texture(s_position, i_uv + vec2(x, y) * size + random).xyz;
-            const vec2 neighbor_uv = texture(s_uv, i_uv + vec2(x, y) * size + random).xy;
+            const vec3 neighbor_position = texture(s_position, random).xyz;
+            const vec2 neighbor_uv = texture(s_uv, random).xy;
             if (length(neighbor_uv) == 0 ||
                 direction != neighbor_direction ||
                 get_edge(neighbor_direction, position.xyz, neighbor_position))
