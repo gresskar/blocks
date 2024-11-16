@@ -146,8 +146,8 @@ static bool create_textures()
     tci.usage = SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET | SDL_GPU_TEXTUREUSAGE_SAMPLER;
     tci.type = SDL_GPU_TEXTURETYPE_2D;
     tci.format = SDL_GPU_TEXTUREFORMAT_D32_FLOAT;
-    tci.width = SHADOW_WIDTH;
-    tci.height = SHADOW_HEIGHT;
+    tci.width = SHADOW_SIZE;
+    tci.height = SHADOW_SIZE;
     tci.layer_count_or_depth = 1;
     tci.num_levels = 1;
     shadow_texture = SDL_CreateGPUTexture(device, &tci);
@@ -159,7 +159,7 @@ static bool create_textures()
     return true;
 }
 
-static bool resize_textures(const uint32_t width, const uint32_t height)
+static bool resize_textures(const int width, const int height)
 {
     if (depth_texture)
     {
@@ -272,27 +272,27 @@ static bool create_vbos()
 {
     const float quad[][2] =
     {
-        {-1,-1},
-        { 1,-1},
-        {-1, 1},
-        { 1, 1},
-        { 1,-1},
-        {-1, 1},
+        {-1,-1 },
+        { 1,-1 },
+        {-1, 1 },
+        { 1, 1 },
+        { 1,-1 },
+        {-1, 1 },
     };
     const float cube[][3] =
     {
-        {-1,-1,-1}, { 1,-1,-1}, { 1, 1,-1},
-        {-1,-1,-1}, { 1, 1,-1}, {-1, 1,-1},
-        { 1,-1, 1}, { 1, 1, 1}, {-1, 1, 1},
-        { 1,-1, 1}, {-1, 1, 1}, {-1,-1, 1},
-        {-1,-1,-1}, {-1, 1,-1}, {-1, 1, 1},
-        {-1,-1,-1}, {-1, 1, 1}, {-1,-1, 1},
-        { 1,-1,-1}, { 1,-1, 1}, { 1, 1, 1},
-        { 1,-1,-1}, { 1, 1, 1}, { 1, 1,-1},
-        {-1, 1,-1}, { 1, 1,-1}, { 1, 1, 1},
-        {-1, 1,-1}, { 1, 1, 1}, {-1, 1, 1},
-        {-1,-1,-1}, {-1,-1, 1}, { 1,-1, 1},
-        {-1,-1,-1}, { 1,-1, 1}, { 1,-1,-1},
+        {-1,-1,-1 }, { 1,-1,-1 }, { 1, 1,-1 },
+        {-1,-1,-1 }, { 1, 1,-1 }, {-1, 1,-1 },
+        { 1,-1, 1 }, { 1, 1, 1 }, {-1, 1, 1 },
+        { 1,-1, 1 }, {-1, 1, 1 }, {-1,-1, 1 },
+        {-1,-1,-1 }, {-1, 1,-1 }, {-1, 1, 1 },
+        {-1,-1,-1 }, {-1, 1, 1 }, {-1,-1, 1 },
+        { 1,-1,-1 }, { 1,-1, 1 }, { 1, 1, 1 },
+        { 1,-1,-1 }, { 1, 1, 1 }, { 1, 1,-1 },
+        {-1, 1,-1 }, { 1, 1,-1 }, { 1, 1, 1 },
+        {-1, 1,-1 }, { 1, 1, 1 }, {-1, 1, 1 },
+        {-1,-1,-1 }, {-1,-1, 1 }, { 1,-1, 1 },
+        {-1,-1,-1 }, { 1,-1, 1 }, { 1,-1,-1 },
     };
     SDL_GPUBufferCreateInfo bci = {0};
     bci.usage = SDL_GPU_BUFFERUSAGE_VERTEX;
@@ -410,7 +410,7 @@ static void draw_shadow()
     }
     pipeline_bind(pass, PIPELINE_SHADOW);
     SDL_PushGPUVertexUniformData(commands, 1, shadow_camera.matrix, 64);
-    world_render(NULL, commands, pass, true);
+    world_render(NULL, commands, pass, WORLD_PASS_TYPE_OPAQUE);
     SDL_EndGPURenderPass(pass);
 }
 
@@ -450,7 +450,7 @@ static void draw_opaque()
     SDL_BindGPUFragmentSamplers(pass, 0, &tsb, 1);
     SDL_PushGPUVertexUniformData(commands, 1, player_camera.view, 64);
     SDL_PushGPUVertexUniformData(commands, 2, player_camera.proj, 64);
-    world_render(&player_camera, commands, pass, true);
+    world_render(&player_camera, commands, pass, WORLD_PASS_TYPE_OPAQUE);
     SDL_EndGPURenderPass(pass);
 }
 
@@ -556,7 +556,7 @@ static void draw_transparent()
     SDL_PushGPUVertexUniformData(commands, 3, shadow_camera.matrix, 64);
     SDL_PushGPUFragmentUniformData(commands, 0, vector, 12);
     SDL_BindGPUFragmentSamplers(pass, 0, tsb, 2);
-    world_render(&player_camera, commands, pass, false);
+    world_render(&player_camera, commands, pass, WORLD_PASS_TYPE_TRANSPARENT);
     SDL_EndGPURenderPass(pass);
 }
 
@@ -566,7 +566,7 @@ static void draw_raycast()
     float a, b, c;
     camera_get_position(&player_camera, &x, &y, &z);
     camera_vector(&player_camera, &a, &b, &c);
-    if (!raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH, false))
+    if (!raycast(&x, &y, &z, a, b, c, false))
     {
         return;
     }
@@ -703,7 +703,7 @@ static bool poll()
                 float a, b, c;
                 camera_get_position(&player_camera, &x, &y, &z);
                 camera_vector(&player_camera, &a, &b, &c);
-                if (raycast(&x, &y, &z, a, b, c, RAYCAST_LENGTH, previous) && y >= 1.0f)
+                if (raycast(&x, &y, &z, a, b, c, previous) && y >= 1.0f)
                 {
                     world_set_block(x, y, z, block);
                 }
@@ -789,7 +789,7 @@ int main(int argc, char** argv)
 {
     (void) argc;
     (void) argv;
-    SDL_SetAppMetadata(APP_NAME, APP_VERSION, NULL);
+    SDL_SetAppMetadata(APP_NAME, NULL, NULL);
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
         SDL_Log("Failed to initialize SDL: %s", SDL_GetError());
@@ -856,7 +856,7 @@ int main(int argc, char** argv)
     float z;
     float pitch;
     float yaw;
-    camera_init(&player_camera, false);
+    camera_init(&player_camera, CAMERA_TYPE_PERSPECTIVE);
     camera_viewport(&player_camera, APP_WIDTH, APP_HEIGHT);
     if (database_get_player(DATABASE_PLAYER, &x, &y, &z, &pitch, &yaw))
     {
@@ -868,7 +868,7 @@ int main(int argc, char** argv)
         srand(time(NULL));
         camera_set_position(&player_camera, rand(), PLAYER_Y, rand());
     }
-    camera_init(&shadow_camera, true);
+    camera_init(&shadow_camera, CAMERA_TYPE_ORTHO);
     camera_set_rotation(&shadow_camera, SHADOW_PITCH, SHADOW_YAW);
     move(0.0f);
     int cooldown = 0;
@@ -888,7 +888,7 @@ int main(int argc, char** argv)
         camera_get_position(&player_camera, &x, &y, &z);
         world_update(x, y, z);
         draw();
-        if (cooldown++ > DATABASE_TIME)
+        if (cooldown++ > DATABASE_COOLDOWN)
         {
             commit();
             cooldown = 0;

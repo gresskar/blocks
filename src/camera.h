@@ -2,8 +2,16 @@
 
 #include <stdbool.h>
 
+typedef enum
+{
+    CAMERA_TYPE_PERSPECTIVE,
+    CAMERA_TYPE_ORTHO,
+}
+camera_type_t;
+
 typedef struct
 {
+    camera_type_t type;
     float matrix[4][4];
     float view[4][4];
     float proj[4][4];
@@ -18,15 +26,14 @@ typedef struct
     float fov;
     float near;
     float far;
-    float size;
-    bool ortho;
+    float ortho;
     bool dirty;
 }
 camera_t;
 
 void camera_init(
     camera_t* camera,
-    const bool ortho);
+    const camera_type_t type);
 void camera_update(camera_t* camera);
 void camera_viewport(
     camera_t* camera,

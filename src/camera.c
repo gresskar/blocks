@@ -182,9 +182,10 @@ static void frustum(
 
 void camera_init(
     camera_t* camera,
-    const bool ortho)
+    const camera_type_t type)
 {
     assert(camera);
+    camera->type = type;
     camera->x = 0.0f;
     camera->y = 0.0f;
     camera->z = 0.0f;
@@ -195,8 +196,7 @@ void camera_init(
     camera->fov = rad(90.0f);
     camera->near = 1.0f;
     camera->far = 300.0f;
-    camera->size = 300.0f;
-    camera->ortho = ortho;
+    camera->ortho = 300.0f;
     camera->dirty = true;
 }
 
@@ -214,10 +214,10 @@ void camera_update(camera_t* camera)
     multiply(camera->view, camera->proj, camera->view);
     rotate(camera->proj, 0.0f, 1.0f, 0.0f, -camera->yaw);
     multiply(camera->view, camera->proj, camera->view);
-    if (camera->ortho)
+    if (camera->type == CAMERA_TYPE_ORTHO)
     {
-        const float w = camera->size;
-        ortho(camera->proj, -w, w, -w, w, -camera->far, camera->far);
+        const float o = camera->ortho;
+        ortho(camera->proj, -o, o, -o, o, -camera->far, camera->far);
     }
     else
     {
@@ -261,9 +261,9 @@ void camera_move(
     const float c = cosf(camera->yaw);
     const float a = sinf(camera->pitch);
     const float b = cosf(camera->pitch);
-    camera->x += b * (s * z + c * x);
+    camera->x += b * (s * z) + c * x;
     camera->y += y + z * a;
-    camera->z -= b * (c * z - s * x);
+    camera->z -= b * (c * z) - s * x;
     camera->dirty = true;
 }
 

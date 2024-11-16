@@ -49,11 +49,11 @@ static thrd_t thrd;
 static mtx_t mtx;
 static cnd_t cnd;
 static queue_t queue;
-static sqlite3* handle;
 static sqlite3_stmt* set_player_stmt;
 static sqlite3_stmt* get_player_stmt;
 static sqlite3_stmt* set_block_stmt;
 static sqlite3_stmt* get_blocks_stmt;
+static sqlite3* handle;
 
 static int loop(void* args)
 {
@@ -110,6 +110,11 @@ static int loop(void* args)
 bool database_init(const char* file)
 {
     assert(file);
+    if (sqlite3_open(file, &handle))
+    {
+        SDL_Log("Failed to open %s database: %s", file, sqlite3_errmsg(handle));
+        return false;
+    }
     const char* players_table =
         "CREATE TABLE IF NOT EXISTS players ("
         "    id INT PRIMARY KEY NOT NULL,"
@@ -128,9 +133,16 @@ bool database_init(const char* file)
         "    z INTEGER NOT NULL,"
         "    data INTEGER NOT NULL"
         ");";
-    const char* blocks_index =
-        "CREATE INDEX IF NOT EXISTS blocks_index "
-        "ON blocks (a, c);";
+    if (sqlite3_exec(handle, players_table, NULL, NULL, NULL))
+    {
+        SDL_Log("Failed to create players table: %s", sqlite3_errmsg(handle));
+        return false;
+    }
+    if (sqlite3_exec(handle, blocks_table, NULL, NULL, NULL))
+    {
+        SDL_Log("Failed to create blocks table: %s", sqlite3_errmsg(handle));
+        return false;
+    }
     const char* set_player =
         "INSERT OR REPLACE INTO players (id, x, y, z, pitch, yaw) "
         "VALUES (?, ?, ?, ?, ?, ?);";
@@ -143,27 +155,6 @@ bool database_init(const char* file)
     const char* get_blocks =
         "SELECT x, y, z, data FROM blocks "
         "WHERE a = ? AND c = ?;";
-    queue_init(&queue, DATABASE_MAX_JOBS, sizeof(job_t));
-    if (sqlite3_open(file, &handle))
-    {
-        SDL_Log("Failed to open %s database: %s", file, sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_exec(handle, players_table, NULL, NULL, NULL))
-    {
-        SDL_Log("Failed to create players table: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_exec(handle, blocks_table, NULL, NULL, NULL))
-    {
-        SDL_Log("Failed to create blocks table: %s", sqlite3_errmsg(handle));
-        return false;
-    }
-    if (sqlite3_exec(handle, blocks_index, NULL, NULL, NULL))
-    {
-        SDL_Log("Failed to create blocks index: %s", sqlite3_errmsg(handle));
-        return false;
-    }
     if (sqlite3_prepare_v2(handle, set_player, -1, &set_player_stmt, NULL))
     {
         SDL_Log("Failed to prepare set player: %s", sqlite3_errmsg(handle));
@@ -184,6 +175,15 @@ bool database_init(const char* file)
         SDL_Log("Failed to prepare get blocks: %s", sqlite3_errmsg(handle));
         return false;
     }
+    const char* blocks_index =
+        "CREATE INDEX IF NOT EXISTS blocks_index "
+        "ON blocks (a, c);";
+    if (sqlite3_exec(handle, blocks_index, NULL, NULL, NULL))
+    {
+        SDL_Log("Failed to create blocks index: %s", sqlite3_errmsg(handle));
+        return false;
+    }
+    queue_init(&queue, DATABASE_JOBS, sizeof(job_t));
     if (mtx_init(&mtx, mtx_plain) != thrd_success)
     {
         SDL_Log("Failed to create mutex");
@@ -207,7 +207,7 @@ void database_free()
     job_t job;
     job.type = JOB_TYPE_QUIT;
     mtx_lock(&mtx);
-    while (!queue_add(&queue, &job, false))
+    while (!queue_append(&queue, &job, false))
     {
         SDL_Log("Failed to add quit job");
     }
@@ -221,7 +221,6 @@ void database_free()
     sqlite3_finalize(get_player_stmt);
     sqlite3_finalize(set_block_stmt);
     sqlite3_close(handle);
-    handle = NULL;
 }
 
 void database_commit()
@@ -229,7 +228,7 @@ void database_commit()
     job_t job;
     job.type = JOB_TYPE_COMMIT;
     mtx_lock(&mtx);
-    if (!queue_add(&queue, &job, false))
+    if (!queue_append(&queue, &job, false))
     {
         SDL_Log("Failed to add commit job");
     }
@@ -254,7 +253,7 @@ void database_set_player(
     job.player_pitch = pitch;
     job.player_yaw = yaw;
     mtx_lock(&mtx);
-    if (!queue_add(&queue, &job, false))
+    if (!queue_append(&queue, &job, false))
     {
         SDL_Log("Failed to add player job");
     }
@@ -308,7 +307,7 @@ void database_set_block(
     job.block_z = z;
     job.block_id = block;
     mtx_lock(&mtx);
-    if (!queue_add(&queue, &job, false))
+    if (!queue_append(&queue, &job, false))
     {
         SDL_Log("Failed to add block job");
     }

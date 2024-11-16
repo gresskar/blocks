@@ -15,18 +15,18 @@ enum
     BLOCK_STONE,
     BLOCK_LOG,
     BLOCK_LEAVES,
+    BLOCK_CLOUD,
     BLOCK_BLUEBELL,
     BLOCK_DANDELION,
     BLOCK_ROSE,
     BLOCK_LAVENDER,
     BLOCK_WATER,
-    BLOCK_CLOUD,
     BLOCK_COUNT,
 };
 
 bool block_opaque(const block_t block);
-bool block_solid(const block_t block);
 bool block_sprite(const block_t block);
+bool block_solid(const block_t block);
 bool block_shadow(const block_t block);
 
 extern const int blocks[][DIRECTION_3][2];

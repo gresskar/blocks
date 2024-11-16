@@ -1,28 +1,12 @@
 #include <stdbool.h>
-#include "helpers.h"
 #include "block.h"
+#include "helpers.h"
 
 bool block_opaque(const block_t block)
 {
     assert(block < BLOCK_COUNT);
     switch (block)
     {
-    case BLOCK_WATER:
-        return 0;
-    }
-    return 1;
-}
-
-bool block_solid(const block_t block)
-{
-    assert(block < BLOCK_COUNT);
-    switch (block)
-    {
-    case BLOCK_BLUEBELL:
-    case BLOCK_DANDELION:
-    case BLOCK_EMPTY:
-    case BLOCK_LAVENDER:
-    case BLOCK_ROSE:
     case BLOCK_WATER:
         return 0;
     }
@@ -41,6 +25,22 @@ bool block_sprite(const block_t block)
         return 1;
     }
     return 0;
+}
+
+bool block_solid(const block_t block)
+{
+    assert(block < BLOCK_COUNT);
+    switch (block)
+    {
+    case BLOCK_BLUEBELL:
+    case BLOCK_DANDELION:
+    case BLOCK_EMPTY:
+    case BLOCK_LAVENDER:
+    case BLOCK_ROSE:
+    case BLOCK_WATER:
+        return 0;
+    }
+    return 1;
 }
 
 bool block_shadow(const block_t block)

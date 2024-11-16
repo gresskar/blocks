@@ -21,7 +21,7 @@ static thread_local int cy;
 static thread_local int cz;
 static thread_local bool is_2d;
 
-static int dot(
+static int squared(
     const int x,
     const int y,
     const int z)
@@ -42,13 +42,13 @@ static int compare(
     int d;
     if (is_2d)
     {
-        c = dot(l[0], 0, l[1]);
-        d = dot(r[0], 0, r[1]);
+        c = squared(l[0], 0, l[1]);
+        d = squared(r[0], 0, r[1]);
     }
     else
     {
-        c = dot(l[0], l[1], l[2]);
-        d = dot(r[0], r[1], r[2]);
+        c = squared(l[0], l[1], l[2]);
+        d = squared(r[0], r[1], r[2]);
     }
     if (c < d)
     {

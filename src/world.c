@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -49,8 +50,8 @@ static terrain_t terrain;
 static SDL_GPUDevice* device;
 static SDL_GPUBuffer* ibo;
 static uint32_t ibo_size;
-static worker_t workers[WORLD_MAX_WORKERS];
 static queue_t queue;
+static worker_t workers[WORLD_WORKERS];
 static int sorted[WORLD_Y][WORLD_CHUNKS][3];
 static int height;
 
@@ -101,10 +102,10 @@ static int loop(void* args)
         switch (worker->job->type)
         {
         case JOB_TYPE_LOAD:
-            assert(!group->loaded);
+            assert(group->dirty);
             noise_generate(group, x, z);
             database_get_blocks(group, x, z);
-            group->loaded = true;
+            group->dirty = false;
             break;
         case JOB_TYPE_MESH:
             chunk_t* chunk = &group->chunks[y];
@@ -121,7 +122,7 @@ static int loop(void* args)
                 &worker->opaque_size,
                 &worker->transparent_size))
             {
-                chunk->renderable = 1;
+                chunk->dirty = false;
             }
             break;
         default:
@@ -163,7 +164,7 @@ static void load(
 {
     assert(group);
     assert(!group->neighbors);
-    assert(!group->loaded);
+    assert(group->dirty);
     assert(terrain_in2(&terrain, x, z));
     group_t* neighbors[DIRECTION_2];
     terrain_neighbors2(&terrain, x, z, neighbors);
@@ -172,7 +173,7 @@ static void load(
         const group_t* neighbor = neighbors[c];
         if (neighbor)
         {
-            group->neighbors += neighbor->loaded;
+            group->neighbors += !neighbor->dirty;
         }
     }
     tag_invalidate(&group->tag);
@@ -182,7 +183,7 @@ static void load(
     job.x = x;
     job.y = 0;
     job.z = z;
-    if (!queue_add(&queue, &job, false))
+    if (!queue_append(&queue, &job, false))
     {
         SDL_Log("Failed to add load job");
     }
@@ -207,7 +208,7 @@ static bool mesh(
     job.x = x;
     job.y = y;
     job.z = z;
-    if (!queue_add(&queue, &job, true))
+    if (!queue_append(&queue, &job, true))
     {
         SDL_Log("Failed to add mesh job");
         return false;
@@ -222,7 +223,7 @@ static void mesh_all(
 {
     assert(group);
     assert(group->neighbors >= DIRECTION_2);
-    assert(group->loaded);
+    assert(!group->dirty);
     assert(terrain_in2(&terrain, x, z));
     if (terrain_border2(&terrain, x, z))
     {
@@ -231,7 +232,7 @@ static void mesh_all(
     for (int y = 0; y < GROUP_CHUNKS; y++)
     {
         chunk_t* chunk = &group->chunks[y];
-        if (chunk->renderable)
+        if (!chunk->dirty)
         {
             continue;
         }
@@ -242,50 +243,11 @@ static void mesh_all(
     }
 }
 
-static bool test(const job_t* job)
-{
-    assert(job);
-    const int x = job->x;
-    const int y = job->y;
-    const int z = job->z;
-    if (!terrain_in2(&terrain, x, z))
-    {
-        return false;
-    }
-    const group_t* group = terrain_get2(&terrain, x, z);
-    const chunk_t* chunk = &group->chunks[y];
-    switch (job->type)
-    {
-    case JOB_TYPE_LOAD:
-        return tag_same(job->tag, group->tag);
-    case JOB_TYPE_MESH:
-        return tag_same(job->tag, chunk->tag) && !terrain_border2(&terrain, x, z);
-    }
-    assert(0);
-    return false;
-}
-
 bool world_init(SDL_GPUDevice* handle)
 {
     assert(handle);
     device = handle;
     height = INT32_MAX;
-    for (int i = 0; i < WORLD_Y; i++)
-    {
-        int j = 0;
-        for (int x = 0; x < WORLD_X; x++)
-        for (int y = 0; y < WORLD_Y; y++)
-        for (int z = 0; z < WORLD_Z; z++)
-        {
-            sorted[i][j][0] = x;
-            sorted[i][j][1] = y;
-            sorted[i][j][2] = z;
-            j++;
-        }
-        const int w = WORLD_X / 2;
-        const int h = WORLD_Z / 2;
-        sort_3d(w, i, h, sorted[i], WORLD_CHUNKS);
-    }
     terrain_init(&terrain);
     for (int x = 0; x < WORLD_X; x++)
     {
@@ -300,7 +262,8 @@ bool world_init(SDL_GPUDevice* handle)
             tag_init(&group->tag);
         }
     }
-    for (int i = 0; i < WORLD_MAX_WORKERS; i++)
+    queue_init(&queue, WORLD_JOBS, sizeof(job_t));
+    for (int i = 0; i < WORLD_WORKERS; i++)
     {
         worker_t* worker = &workers[i];
         memset(worker, 0, sizeof(worker_t));
@@ -320,7 +283,22 @@ bool world_init(SDL_GPUDevice* handle)
             return false;
         }
     }
-    queue_init(&queue, WORLD_MAX_JOBS, sizeof(job_t));
+    for (int i = 0; i < WORLD_Y; i++)
+    {
+        int j = 0;
+        for (int x = 0; x < WORLD_X; x++)
+        for (int y = 0; y < WORLD_Y; y++)
+        for (int z = 0; z < WORLD_Z; z++)
+        {
+            sorted[i][j][0] = x;
+            sorted[i][j][1] = y;
+            sorted[i][j][2] = z;
+            j++;
+        }
+        const int w = WORLD_X / 2;
+        const int h = WORLD_Z / 2;
+        sort_3d(w, i, h, sorted[i], WORLD_CHUNKS);
+    }
     return true;
 }
 
@@ -328,13 +306,13 @@ void world_free()
 {
     job_t job;
     job.type = JOB_TYPE_QUIT;
-    for (int i = 0; i < WORLD_MAX_WORKERS; i++)
+    for (int i = 0; i < WORLD_WORKERS; i++)
     {
         worker_t* worker = &workers[i];
         job.type = JOB_TYPE_QUIT;
         dispatch(worker, &job);
     }
-    for (int i = 0; i < WORLD_MAX_WORKERS; i++)
+    for (int i = 0; i < WORLD_WORKERS; i++)
     {
         worker_t* worker = &workers[i];
         thrd_join(worker->thrd, NULL);
@@ -408,11 +386,11 @@ static void move(
         {
             chunk_t* chunk = &group->chunks[j];
             memset(chunk->blocks, 0, sizeof(chunk->blocks));
-            chunk->renderable = false;
+            chunk->dirty = true;
             chunk->empty = true;
         }
         group->neighbors = 0;
-        group->loaded = false;
+        group->dirty = true;
     }
     for (int i = 0; i < size; i++)
     {
@@ -423,6 +401,29 @@ static void move(
         load(group, j + terrain.x, k + terrain.z);
     }
     free(data);
+}
+
+static bool test(const job_t* job)
+{
+    assert(job);
+    const int x = job->x;
+    const int y = job->y;
+    const int z = job->z;
+    if (!terrain_in2(&terrain, x, z))
+    {
+        return false;
+    }
+    const group_t* group = terrain_get2(&terrain, x, z);
+    const chunk_t* chunk = &group->chunks[y];
+    switch (job->type)
+    {
+    case JOB_TYPE_LOAD:
+        return tag_same(job->tag, group->tag);
+    case JOB_TYPE_MESH:
+        return tag_same(job->tag, chunk->tag) && !terrain_border2(&terrain, x, z);
+    }
+    assert(0);
+    return false;
 }
 
 static void on_load(
@@ -442,7 +443,7 @@ static void on_load(
             continue;
         }
         neighbor->neighbors++;
-        if (!neighbor->loaded)
+        if (neighbor->dirty)
         {
             continue;
         }
@@ -469,9 +470,9 @@ void world_update(
 {
     move(x, y, z);
     uint32_t n;
-    job_t data[WORLD_MAX_WORKERS];
+    job_t data[WORLD_WORKERS];
     uint32_t size = 0;
-    for (n = 0; n < WORLD_MAX_WORKERS;)
+    for (n = 0; n < WORLD_WORKERS;)
     {
         if (!queue_remove(&queue, &data[n]))
         {
@@ -487,7 +488,7 @@ void world_update(
     {
         dispatch(&workers[i], &data[i]);
     }
-    for (int i = 0; i < WORLD_MAX_WORKERS; i++)
+    for (int i = 0; i < WORLD_WORKERS; i++)
     {
         wait(&workers[i]);
     }
@@ -529,7 +530,7 @@ void world_render(
     const camera_t* camera,
     SDL_GPUCommandBuffer* commands,
     SDL_GPURenderPass* pass,
-    const bool opaque)
+    const world_pass_type_t type)
 {
     assert(commands);
     assert(pass);
@@ -542,7 +543,15 @@ void world_render(
     SDL_BindGPUIndexBuffer(pass, &ibb, SDL_GPU_INDEXELEMENTSIZE_32BIT);
     for (int i = 0; i < WORLD_CHUNKS; i++)
     {
-        const int j = opaque ? i : WORLD_CHUNKS - i - 1;
+        int j;
+        if (type == WORLD_PASS_TYPE_OPAQUE)
+        {
+            j = i;
+        }
+        else
+        {
+            j = WORLD_CHUNKS - i - 1;
+        }
         int x = sorted[height][j][0] + terrain.x;
         int y = sorted[height][j][1];
         int z = sorted[height][j][2] + terrain.z;
@@ -551,18 +560,18 @@ void world_render(
             continue;
         }
         const group_t* group = terrain_get2(&terrain, x, z);
-        if (!group->loaded)
+        if (group->dirty)
         {
             continue;
         }
         const chunk_t* chunk = &group->chunks[y];
-        if (!chunk->renderable)
+        if (chunk->dirty)
         {
             continue;
         }
         SDL_GPUBuffer* vbo;
         uint32_t size;
-        if (opaque)
+        if (type == WORLD_PASS_TYPE_OPAQUE)
         {
             vbo = chunk->opaque_vbo;
             size = chunk->opaque_size;
@@ -660,5 +669,5 @@ block_t world_get_block(
     int f = z;
     chunk_wrap(&d, &w, &f);
     const group_t* group = terrain_get2(&terrain, a, c);
-    return group_get_group(group, d, y, f);
+    return group_get_block(group, d, y, f);
 }

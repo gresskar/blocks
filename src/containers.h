@@ -1,5 +1,6 @@
 #pragma once
 
+#include <SDL3/SDL.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include "block.h"
@@ -20,7 +21,7 @@ void queue_init(
     const int size,
     const int stride);
 void queue_free(queue_t* queue);
-bool queue_add(
+bool queue_append(
     queue_t* queue,
     const void* item,
     const bool priority);
@@ -36,7 +37,7 @@ typedef struct
     uint32_t transparent_size;
     uint32_t opaque_capacity;
     uint32_t transparent_capacity;
-    bool renderable;
+    bool dirty;
     bool empty;
 }
 chunk_t;
@@ -55,11 +56,11 @@ typedef struct
     tag_t tag;
     chunk_t chunks[GROUP_CHUNKS];
     direction_t neighbors;
-    bool loaded;
+    bool dirty;
 }
 group_t;
 
-block_t group_get_group(
+block_t group_get_block(
     const group_t* group,
     const int x,
     const int y,

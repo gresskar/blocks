@@ -13,10 +13,10 @@ layout(set = 1, binding = 1) uniform t_proj
 
 void main()
 {
+    o_position = i_position;
     mat4 rotation = u_view;
     rotation[3][0] = 0.0;
     rotation[3][1] = 0.0;
     rotation[3][2] = 0.0;
     gl_Position = u_proj  * rotation * vec4(i_position, 1.0);
-    o_position = i_position;
 }

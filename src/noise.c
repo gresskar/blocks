@@ -15,56 +15,56 @@ void noise_generate(
     {
         const int s = x * CHUNK_X + a;
         const int t = z * CHUNK_Z + b;
-        float height = stb_perlin_fbm_noise3(
-            s * NOISE_FREQUENCY,
-            0.0f,
-            t * NOISE_FREQUENCY,
-            NOISE_LACUNARITY,
-            NOISE_GAIN,
-            NOISE_OCTAVES);
-        height *= NOISE_SCALE;
-        height = powf(fmaxf(height, 0.0f), NOISE_EXPONENTIAL);
-        height += NOISE_SEA;
-        height = clamp(height, 0, GROUP_Y - 1);
         bool low = false;
         bool grass = false;
-        if (height < NOISE_LOW)
+        float height = stb_perlin_fbm_noise3(
+            s * 0.005f,
+            0.0f,
+            t * 0.005f,
+            2.0f,
+            0.5f,
+            6);
+        height *= 50.0f;
+        height = powf(fmaxf(height, 0.0f), 1.3f);
+        height += 30;
+        height = clamp(height, 0, GROUP_Y - 1);
+        if (height < 40)
         {
             const float f = stb_perlin_fbm_noise3(
-                -s * NOISE_LOW_FREQUENCY,
+                -s * 0.01f,
                 0.0f,
-                t * NOISE_LOW_FREQUENCY,
-                NOISE_LACUNARITY,
-                NOISE_GAIN,
-                NOISE_OCTAVES);
-            height += f * NOISE_LOW_SCALE;
+                t * 0.01f,
+                2.0f,
+                0.5f,
+                6);
+            height += f * 12.0f;
             low = true;
         }
         float biome = stb_perlin_fbm_noise3(
-            s * NOISE_BIOME_FREQUENCY,
+            s * 0.2f,
             0.0f,
-            t * NOISE_BIOME_FREQUENCY,
-            NOISE_LACUNARITY,
-            NOISE_GAIN,
-            NOISE_OCTAVES);
+            t * 0.2f,
+            2.0f,
+            0.5f,
+            6);
         block_t top;
         block_t bottom;
-        if (height + biome < NOISE_GRASS)
+        if (height + biome < 31)
         {
             top = BLOCK_SAND;
             bottom = BLOCK_SAND;
         }
         else
         {
-            biome *= NOISE_BIOME_SCALE;
-            biome = clamp(biome, -NOISE_BIOME_CLAMP, NOISE_BIOME_CLAMP);
-            if (height + biome < NOISE_MOUNTAIN)
+            biome *= 8.0f;
+            biome = clamp(biome, -5.0f, 5.0f);
+            if (height + biome < 61)
             {
                 top = BLOCK_GRASS;
                 bottom = BLOCK_DIRT;
                 grass = true;
             }
-            else if (height + biome < NOISE_SNOW)
+            else if (height + biome < 116)
             {
                 top = BLOCK_STONE;
                 bottom = BLOCK_STONE;
@@ -81,16 +81,20 @@ void noise_generate(
             group_set_block(group, a, y, b, bottom);
         }
         group_set_block(group, a, y, b, top);
+        for (; y < 30; y++)
+        {
+            group_set_block(group, a, y, b, BLOCK_WATER);
+        }
         if (low && grass)
         {
             const float plant = stb_perlin_fbm_noise3(
-                s * NOISE_PLANT_FREQUENCY,
+                s * 0.2f,
                 0.0f,
-                t * NOISE_PLANT_FREQUENCY,
-                NOISE_LACUNARITY,
-                NOISE_GAIN,
-                NOISE_OCTAVES);
-            if (plant > NOISE_TREE_THRESHOLD &&
+                t * 0.2f,
+                2.0f,
+                0.5f,
+                3);
+            if (plant > 0.5f &&
                 a > 2 && a < CHUNK_X - 2 &&
                 b > 2 && b < CHUNK_Z - 2)
             {
@@ -109,44 +113,32 @@ void noise_generate(
                     }
                 }
             }
-            else if (plant > NOISE_FLOWER_THRESHOLD)
+            else if (plant > 0.3f)
             {
                 const int value = ((int) (plant * 100.0f)) % 4;
-                if (value == 0)
+                const block_t flowers[] =
                 {
-                    group_set_block(group, a, y + 1, b, BLOCK_ROSE);
-                }
-                else if (value == 1)
-                {
-                    group_set_block(group, a, y + 1, b, BLOCK_DANDELION);
-                }
-                else if (value == 2)
-                {
-                    group_set_block(group, a, y + 1, b, BLOCK_BLUEBELL);
-                }
-                else
-                {
-                    group_set_block(group, a, y + 1, b, BLOCK_LAVENDER);
-                }
+                    BLOCK_BLUEBELL,
+                    BLOCK_DANDELION,
+                    BLOCK_LAVENDER,
+                    BLOCK_ROSE,
+                };
+                group_set_block(group, a, y + 1, b, flowers[value]);
             }
         }
-        for (; y < NOISE_SEA; y++)
-        {
-            group_set_block(group, a, y, b, BLOCK_WATER);
-        }
         const float cloud = stb_perlin_turbulence_noise3(
-            s * NOISE_CLOUD_FREQUENCY,
+            s * 0.02f,
             0.0f,
-            t * NOISE_CLOUD_FREQUENCY,
-            NOISE_LACUNARITY,
-            NOISE_GAIN,
-            NOISE_OCTAVES);
-        if (cloud > NOISE_CLOUD_THRESHOLD && NOISE_CLOUD_Y > height + NOISE_CLOUD_CLEARANCE)
+            t * 0.02f,
+            2.0f,
+            0.5f,
+            6);
+        if (cloud > 0.4f && 155 > height + 20)
         {
-            const int thickness = cloud * NOISE_CLOUD_THICKNESS;
-            for (int y = -thickness; y < thickness; y++)
+            const int scale = cloud * 4;
+            for (int y = -scale; y < scale; y++)
             {
-                group_set_block(group, a, NOISE_CLOUD_Y - y, b, BLOCK_CLOUD);
+                group_set_block(group, a, 155 - y, b, BLOCK_CLOUD);
             }
         }
     }

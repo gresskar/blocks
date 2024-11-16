@@ -29,7 +29,7 @@ void queue_free(queue_t* queue)
     queue->data = NULL;
 }
 
-bool queue_add(
+bool queue_append(
     queue_t* queue,
     const void* item,
     const bool priority)
@@ -95,7 +95,7 @@ bool chunk_in(
         z < CHUNK_Z;
 }
 
-block_t group_get_group(
+block_t group_get_block(
     const group_t* group,
     const int x,
     const int y,
@@ -265,8 +265,8 @@ int* terrain_move(
     }
     terrain->x = x;
     terrain->z = z;
-    group_t* groups1[WORLD_X][WORLD_Z] = {0};
-    group_t* groups2[WORLD_GROUPS];
+    group_t* in[WORLD_X][WORLD_Z] = {0};
+    group_t* out[WORLD_GROUPS];
     int* indices = malloc(WORLD_GROUPS * 2 * sizeof(int));
     assert(indices);
     for (int i = 0; i < WORLD_X; i++)
@@ -277,16 +277,16 @@ int* terrain_move(
             const int d = j - b;
             if (terrain_in(terrain, c, d))
             {
-                groups1[c][d] = terrain_get(terrain, i, j);
+                in[c][d] = terrain_get(terrain, i, j);
             }
             else
             {
-                groups2[(*size)++] = terrain_get(terrain, i, j);
+                out[(*size)++] = terrain_get(terrain, i, j);
             }
             terrain->groups[i][j] = NULL;
         }
     }
-    memcpy(terrain->groups, groups1, sizeof(groups1));
+    memcpy(terrain->groups, in, sizeof(in));
     int n = *size;
     for (int i = 0; i < WORLD_X; i++)
     {
@@ -297,7 +297,7 @@ int* terrain_move(
                 continue;
             }
             --n;
-            terrain->groups[i][j] = groups2[n];
+            terrain->groups[i][j] = out[n];
             indices[n * 2 + 0] = i;
             indices[n * 2 + 1] = j;
         }

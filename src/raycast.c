@@ -12,13 +12,14 @@ bool raycast(
     const float dx,
     const float dy,
     const float dz,
-    const float length,
     const bool previous)
 {
     assert(x);
     assert(y);
     assert(z);
-    for (float i = 0.0f; i < length; i += RAYCAST_STEP)
+    const float length = 10.0f;
+    const float step = 0.02f;
+    for (float i = 0.0f; i < length; i += step)
     {
         float a = *x + dx * i;
         float b = *y + dy * i;
@@ -36,9 +37,9 @@ bool raycast(
         {
             if (previous)
             {
-                a -= dx * RAYCAST_STEP;
-                b -= dy * RAYCAST_STEP;
-                c -= dz * RAYCAST_STEP;
+                a -= dx * step;
+                b -= dy * step;
+                c -= dz * step;
             }
             // TODO: why?
             if (a < 0.0f && a > -1.0f && dx > 0.0f)

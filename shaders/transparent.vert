@@ -27,11 +27,11 @@ layout(set = 1, binding = 3) uniform t_shadow_matrix
 
 void main()
 {
-    o_shadow = uint(get_shadow(i_voxel));
     vec3 position = u_position + get_position(i_voxel);
     o_uv = get_uv(i_voxel);
-    gl_Position = u_matrix * vec4(position, 1.0);
+    o_shadow = uint(get_shadow(i_voxel));
     o_fog = get_fog(position.xz, u_player_position.xz);
+    gl_Position = u_matrix * vec4(position, 1.0);
     if (!bool(o_shadow))
     {
         return;

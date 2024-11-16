@@ -9,5 +9,4 @@ bool raycast(
     const float dx,
     const float dy,
     const float dz,
-    const float length,
     const bool previous);

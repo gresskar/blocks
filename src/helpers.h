@@ -12,9 +12,9 @@
 
 #define EPSILON 0.000001
 #define PI 3.14159265359
-#define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define max3(a, b, c) (max(a, max(b, c)))
+#define min(a, b) ((a) < (b) ? (a) : (b))
 #define clamp(x, a, b) min(b, max(a, x))
 #define deg(rad) ((rad) * 180.0 / PI)
 #define rad(deg) ((deg) * PI / 180.0)

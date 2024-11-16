@@ -57,11 +57,6 @@ vec2 get_uv(const uint voxel)
     return get_atlas(uv);
 }
 
-bool get_shadow(const uint voxel)
-{
-    return bool(voxel >> VOXEL_SHADOW_OFFSET & VOXEL_SHADOW_MASK);
-}
-
 uint get_direction(const uint voxel)
 {
     return voxel >> VOXEL_DIRECTION_OFFSET & VOXEL_DIRECTION_MASK;
@@ -70,6 +65,11 @@ uint get_direction(const uint voxel)
 vec3 get_normal(const uint voxel)
 {
     return normals[get_direction(voxel)];
+}
+
+bool get_shadow(const uint voxel)
+{
+    return bool(voxel >> VOXEL_SHADOW_OFFSET & VOXEL_SHADOW_MASK);
 }
 
 vec3 get_sky(const float y)

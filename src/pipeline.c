@@ -46,7 +46,7 @@ static SDL_GPUShader* load(
     return shader;
 }
 
-static SDL_GPUGraphicsPipeline* sky(SDL_Window* window)
+static SDL_GPUGraphicsPipeline* load_sky(SDL_Window* window)
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
@@ -89,7 +89,7 @@ static SDL_GPUGraphicsPipeline* sky(SDL_Window* window)
     return pipeline;
 }
 
-static SDL_GPUGraphicsPipeline* shadow(SDL_Window* window)
+static SDL_GPUGraphicsPipeline* load_shadow(SDL_Window* window)
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
@@ -141,7 +141,7 @@ static SDL_GPUGraphicsPipeline* shadow(SDL_Window* window)
     return pipeline;
 }
 
-static SDL_GPUGraphicsPipeline* opaque(SDL_Window* window)
+static SDL_GPUGraphicsPipeline* load_opaque(SDL_Window* window)
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
@@ -204,7 +204,7 @@ static SDL_GPUGraphicsPipeline* opaque(SDL_Window* window)
     return pipeline;
 }
 
-static SDL_GPUGraphicsPipeline* ssao(SDL_Window* window)
+static SDL_GPUGraphicsPipeline* load_ssao(SDL_Window* window)
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
@@ -247,7 +247,7 @@ static SDL_GPUGraphicsPipeline* ssao(SDL_Window* window)
     return pipeline;
 }
 
-static SDL_GPUGraphicsPipeline* composite(SDL_Window* window)
+static SDL_GPUGraphicsPipeline* load_composite(SDL_Window* window)
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
@@ -290,7 +290,7 @@ static SDL_GPUGraphicsPipeline* composite(SDL_Window* window)
     return pipeline;
 }
 
-static SDL_GPUGraphicsPipeline* transparent(SDL_Window* window)
+static SDL_GPUGraphicsPipeline* load_transparent(SDL_Window* window)
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
@@ -355,7 +355,7 @@ static SDL_GPUGraphicsPipeline* transparent(SDL_Window* window)
     return pipeline;
 }
 
-static SDL_GPUGraphicsPipeline* raycast(SDL_Window* window)
+static SDL_GPUGraphicsPipeline* load_raycast(SDL_Window* window)
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
@@ -416,7 +416,7 @@ static SDL_GPUGraphicsPipeline* raycast(SDL_Window* window)
     return pipeline;
 }
 
-static SDL_GPUGraphicsPipeline* ui(SDL_Window* window)
+static SDL_GPUGraphicsPipeline* load_ui(SDL_Window* window)
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
@@ -476,14 +476,14 @@ bool pipeline_init(
     assert(handle);
     assert(window);
     device = handle;
-    pipelines[PIPELINE_SKY] = sky(window);
-    pipelines[PIPELINE_SHADOW] = shadow(window);
-    pipelines[PIPELINE_OPAQUE] = opaque(window);
-    pipelines[PIPELINE_SSAO] = ssao(window);
-    pipelines[PIPELINE_COMPOSITE] = composite(window);
-    pipelines[PIPELINE_TRANSPARENT] = transparent(window);
-    pipelines[PIPELINE_RAYCAST] = raycast(window);
-    pipelines[PIPELINE_UI] = ui(window);
+    pipelines[PIPELINE_SKY] = load_sky(window);
+    pipelines[PIPELINE_SHADOW] = load_shadow(window);
+    pipelines[PIPELINE_OPAQUE] = load_opaque(window);
+    pipelines[PIPELINE_SSAO] = load_ssao(window);
+    pipelines[PIPELINE_COMPOSITE] = load_composite(window);
+    pipelines[PIPELINE_TRANSPARENT] = load_transparent(window);
+    pipelines[PIPELINE_RAYCAST] = load_raycast(window);
+    pipelines[PIPELINE_UI] = load_ui(window);
     for (pipeline_t pipeline = 0; pipeline < PIPELINE_COUNT; pipeline++)
     {
         if (!pipelines[pipeline])
