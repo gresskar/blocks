@@ -208,7 +208,7 @@ static SDL_GPUGraphicsPipeline* load_ssao(SDL_Window* window)
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = load(device, "fullscreen2.vert", 0, 0),
+        .vertex_shader = load(device, "fullscreen.vert", 0, 0),
         .fragment_shader = load(device, "ssao.frag", 0, 3),
         .target_info =
         {
@@ -251,7 +251,7 @@ static SDL_GPUGraphicsPipeline* load_composite(SDL_Window* window)
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = load(device, "fullscreen2.vert", 0, 0),
+        .vertex_shader = load(device, "fullscreen.vert", 0, 0),
         .fragment_shader = load(device, "composite.frag", 3, 6),
         .target_info =
         {
@@ -420,7 +420,7 @@ static SDL_GPUGraphicsPipeline* load_ui(SDL_Window* window)
 {
     SDL_GPUGraphicsPipelineCreateInfo info =
     {
-        .vertex_shader = load(device, "fullscreen1.vert", 0, 0),
+        .vertex_shader = load(device, "ui.vert", 0, 0),
         .fragment_shader = load(device, "ui.frag", 2, 1),
         .target_info =
         {

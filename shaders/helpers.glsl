@@ -74,7 +74,7 @@ bool get_shadow(const uint voxel)
 
 vec3 get_sky(const float y)
 {
-    return mix(vec3(0.3, 0.6, 0.9), vec3(0.8, 0.95, 1.0), max(y - 0.5, 0.0));
+    return mix(vec3(0.3, 0.6, 0.9), vec3(0.8, 0.95, 1.0), max(y - 0.6, 0.0));
 }
 
 float get_fog(const vec2 position, const vec2 camera)
