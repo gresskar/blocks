@@ -72,6 +72,11 @@ bool get_shadow(const uint voxel)
     return bool(voxel >> VOXEL_SHADOW_OFFSET & VOXEL_SHADOW_MASK);
 }
 
+bool get_shadowed(const uint voxel)
+{
+    return bool(voxel >> VOXEL_SHADOWED_OFFSET & VOXEL_SHADOWED_MASK);
+}
+
 vec3 get_sky(const float y)
 {
     return mix(vec3(0.3, 0.6, 0.9), vec3(0.8, 0.95, 1.0), max(y - 0.6, 0.0));
@@ -93,7 +98,7 @@ vec4 get_color(
     const vec2 uv,
     const vec3 shadow_position,
     const vec3 shadow_vector,
-    const bool shadow,
+    const bool shadowed,
     const vec3 normal,
     const float fog,
     const float ssao)
@@ -101,10 +106,12 @@ vec4 get_color(
     float a;
     float b;
     float c;
-    if (shadow && ((dot(normal, -shadow_vector) < 0.0) || (
+    const float angle = dot(normal, -shadow_vector);
+    const float depth = shadow_position.z - 0.001;
+    if (shadowed && ((angle < 0.0) || (
         all(greaterThanEqual(shadow_position, vec3(0.0))) &&
         all(lessThanEqual(shadow_position, vec3(1.0))) &&
-        (shadow_position.z - 0.0005 > texture(shadowmap, shadow_position.xy).x))))
+        (depth > texture(shadowmap, shadow_position.xy).x))))
     {
         a = ssao * 0.2;
         b = 0.0;
@@ -114,7 +121,7 @@ vec4 get_color(
     {
         a = ssao * 0.3;
         b = 0.4;
-        c = max(dot(normal, -shadow_vector), 0.0) * 0.6;
+        c = max(angle, 0.0) * 0.6;
     }
     const vec4 color = texture(atlas, uv);
     const vec4 composite = vec4(color.xyz * (a + b + c + 0.3), color.a);

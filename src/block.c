@@ -13,37 +13,22 @@ bool block_opaque(const block_t block)
     return 1;
 }
 
-bool block_sprite(const block_t block)
+bool block_shadow(const block_t block)
 {
     assert(block < BLOCK_COUNT);
-    switch (block)
+    if (block_sprite(block))
     {
-    case BLOCK_BLUEBELL:
-    case BLOCK_DANDELION:
-    case BLOCK_LAVENDER:
-    case BLOCK_ROSE:
-        return 1;
+        return false;
     }
-    return 0;
-}
-
-bool block_solid(const block_t block)
-{
-    assert(block < BLOCK_COUNT);
     switch (block)
     {
-    case BLOCK_BLUEBELL:
-    case BLOCK_DANDELION:
-    case BLOCK_EMPTY:
-    case BLOCK_LAVENDER:
-    case BLOCK_ROSE:
-    case BLOCK_WATER:
+    case BLOCK_CLOUD:
         return 0;
     }
     return 1;
 }
 
-bool block_shadow(const block_t block)
+bool block_shadowed(const block_t block)
 {
     assert(block < BLOCK_COUNT);
     switch (block)
@@ -52,6 +37,37 @@ bool block_shadow(const block_t block)
         return 0;
     }
     return 1;
+}
+
+bool block_solid(const block_t block)
+{
+    assert(block < BLOCK_COUNT);
+    if (block_sprite(block))
+    {
+        return false;
+    }
+    switch (block)
+    {
+    case BLOCK_EMPTY:
+    case BLOCK_WATER:
+        return 0;
+    }
+    return 1;
+}
+
+bool block_sprite(const block_t block)
+{
+    assert(block < BLOCK_COUNT);
+    switch (block)
+    {
+    case BLOCK_BUSH:
+    case BLOCK_BLUEBELL:
+    case BLOCK_DANDELION:
+    case BLOCK_LAVENDER:
+    case BLOCK_ROSE:
+        return 1;
+    }
+    return 0;
 }
 
 const int blocks[][DIRECTION_3][2] =
@@ -91,6 +107,15 @@ const int blocks[][DIRECTION_3][2] =
         [DIRECTION_S] = { 1, 2 },
         [DIRECTION_U] = { 1, 2 },
         [DIRECTION_D] = { 1, 2 },
+    },
+    [BLOCK_BUSH] =
+    {
+        [DIRECTION_E] = { 4, 2 },
+        [DIRECTION_W] = { 4, 2 },
+        [DIRECTION_N] = { 4, 2 },
+        [DIRECTION_S] = { 4, 2 },
+        [DIRECTION_U] = { 4, 2 },
+        [DIRECTION_D] = { 4, 2 },
     },
     [BLOCK_DIRT] =
     {

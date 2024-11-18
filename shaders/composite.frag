@@ -39,7 +39,7 @@ void main()
         uv,
         shadow_position.xyz / shadow_position.w,
         u_shadow_vector,
-        get_shadow(voxel),
+        get_shadowed(voxel),
         get_normal(voxel),
         get_fog(position.xz, u_player_position.xz),
         texture(s_ssao, i_uv).r);

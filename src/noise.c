@@ -93,8 +93,8 @@ void noise_generate(
                 t * 0.2f,
                 2.0f,
                 0.5f,
-                3);
-            if (plant > 0.5f &&
+                3) * 0.5 + 0.5;
+            if (plant > 0.8f &&
                 a > 2 && a < CHUNK_X - 2 &&
                 b > 2 && b < CHUNK_Z - 2)
             {
@@ -113,9 +113,13 @@ void noise_generate(
                     }
                 }
             }
-            else if (plant > 0.3f)
+            else if (plant > 0.55f)
             {
-                const int value = ((int) (plant * 100.0f)) % 4;
+                group_set_block(group, a, y + 1, b, BLOCK_BUSH);
+            }
+            else if (plant > 0.52f)
+            {
+                const int value = ((int) (plant * 1000.0f)) % 4;
                 const block_t flowers[] =
                 {
                     BLOCK_BLUEBELL,

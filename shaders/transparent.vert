@@ -6,7 +6,7 @@ layout(location = 0) in uint i_voxel;
 layout(location = 0) out vec2 o_uv;
 layout(location = 1) out flat vec3 o_normal;
 layout(location = 2) out vec4 o_shadow_position;
-layout(location = 3) out flat uint o_shadow;
+layout(location = 3) out flat uint o_shadowed;
 layout(location = 4) out float o_fog;
 layout(set = 1, binding = 0) uniform t_position
 {
@@ -29,10 +29,10 @@ void main()
 {
     vec3 position = u_position + get_position(i_voxel);
     o_uv = get_uv(i_voxel);
-    o_shadow = uint(get_shadow(i_voxel));
+    o_shadowed = uint(get_shadowed(i_voxel));
     o_fog = get_fog(position.xz, u_player_position.xz);
     gl_Position = u_matrix * vec4(position, 1.0);
-    if (!bool(o_shadow))
+    if (!bool(o_shadowed))
     {
         return;
     }

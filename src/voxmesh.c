@@ -6,15 +6,42 @@
 #include "voxmesh.h"
 #include "world.h"
 
-static_assert(VOXEL_X_OFFSET + VOXEL_X_BITS <= 32, "");
-static_assert(VOXEL_Y_OFFSET + VOXEL_Y_BITS <= 32, "");
-static_assert(VOXEL_Z_OFFSET + VOXEL_Z_BITS <= 32, "");
-static_assert(VOXEL_U_OFFSET + VOXEL_U_BITS <= 32, "");
-static_assert(VOXEL_V_OFFSET + VOXEL_V_BITS <= 32, "");
-static_assert(VOXEL_DIRECTION_OFFSET + VOXEL_DIRECTION_BITS <= 32, "");
-static_assert(VOXEL_SHADOW_OFFSET + VOXEL_SHADOW_BITS <= 32, "");
-
 static uint32_t pack(
+    const block_t block,
+    const int x,
+    const int y,
+    const int z,
+    const int u,
+    const int v,
+    const direction_t direction)
+{
+    static_assert(VOXEL_X_OFFSET + VOXEL_X_BITS <= 32, "");
+    static_assert(VOXEL_Y_OFFSET + VOXEL_Y_BITS <= 32, "");
+    static_assert(VOXEL_Z_OFFSET + VOXEL_Z_BITS <= 32, "");
+    static_assert(VOXEL_U_OFFSET + VOXEL_U_BITS <= 32, "");
+    static_assert(VOXEL_V_OFFSET + VOXEL_V_BITS <= 32, "");
+    static_assert(VOXEL_DIRECTION_OFFSET + VOXEL_DIRECTION_BITS <= 32, "");
+    static_assert(VOXEL_SHADOW_OFFSET + VOXEL_SHADOW_BITS <= 32, "");
+    static_assert(VOXEL_SHADOWED_OFFSET + VOXEL_SHADOWED_BITS <= 32, "");
+    assert(x <= VOXEL_X_MASK);
+    assert(y <= VOXEL_Y_MASK);
+    assert(z <= VOXEL_Z_MASK);
+    assert(u <= VOXEL_U_MASK);
+    assert(v <= VOXEL_V_MASK);
+    assert(direction <= VOXEL_DIRECTION_MASK);
+    uint32_t voxel = 0;
+    voxel |= x << VOXEL_X_OFFSET;
+    voxel |= y << VOXEL_Y_OFFSET;
+    voxel |= z << VOXEL_Z_OFFSET;
+    voxel |= u << VOXEL_U_OFFSET;
+    voxel |= v << VOXEL_V_OFFSET;
+    voxel |= direction << VOXEL_DIRECTION_OFFSET;
+    voxel |= block_shadow(block) << VOXEL_SHADOW_OFFSET;
+    voxel |= block_shadowed(block) << VOXEL_SHADOWED_OFFSET;
+    return voxel;
+}
+
+static uint32_t pack_normal(
     const block_t block,
     const int x,
     const int y,
@@ -49,21 +76,7 @@ static uint32_t pack(
     const int c = positions[direction][i][2] + z;
     const int d = uvs[direction][i][0] + blocks[block][direction][0];
     const int e = uvs[direction][i][1] + blocks[block][direction][1];
-    assert(a <= VOXEL_X_MASK);
-    assert(b <= VOXEL_Y_MASK);
-    assert(c <= VOXEL_Z_MASK);
-    assert(d <= VOXEL_U_MASK);
-    assert(e <= VOXEL_V_MASK);
-    assert(direction <= VOXEL_DIRECTION_MASK);
-    uint32_t voxel = 0;
-    voxel |= a << VOXEL_X_OFFSET;
-    voxel |= b << VOXEL_Y_OFFSET;
-    voxel |= c << VOXEL_Z_OFFSET;
-    voxel |= d << VOXEL_U_OFFSET;
-    voxel |= e << VOXEL_V_OFFSET;
-    voxel |= direction << VOXEL_DIRECTION_OFFSET;
-    voxel |= block_shadow(block) << VOXEL_SHADOW_OFFSET;
-    return voxel;
+    return pack(block, a, b, c, d, e, direction);
 }
 
 static uint32_t pack_sprite(
@@ -97,19 +110,7 @@ static uint32_t pack_sprite(
     const int c = positions[direction][i][2] + z;
     const int d = uvs[direction][i][0] + blocks[block][DIRECTION_N][0];
     const int e = uvs[direction][i][1] + blocks[block][DIRECTION_N][1];
-    assert(a <= VOXEL_X_MASK);
-    assert(b <= VOXEL_Y_MASK);
-    assert(c <= VOXEL_Z_MASK);
-    assert(d <= VOXEL_U_MASK);
-    assert(e <= VOXEL_V_MASK);
-    uint32_t voxel = 0;
-    voxel |= a << VOXEL_X_OFFSET;
-    voxel |= b << VOXEL_Y_OFFSET;
-    voxel |= c << VOXEL_Z_OFFSET;
-    voxel |= d << VOXEL_U_OFFSET;
-    voxel |= e << VOXEL_V_OFFSET;
-    voxel |= block_shadow(block) << VOXEL_SHADOW_OFFSET;
-    return voxel;
+    return pack(block, a, b, c, d, e, DIRECTION_U);
 }
 
 static void fill(
@@ -201,7 +202,7 @@ static void fill(
             }
             for (int i = 0; i < 4; i++)
             {
-                data[*size * 4 - 4 + i] = pack(a, x, y, z, d, i);    
+                data[*size * 4 - 4 + i] = pack_normal(a, x, y, z, d, i);    
             }
         }
     }
