@@ -26,7 +26,9 @@ add_executable(blocks WIN32
     src/voxmesh.c
     src/world.c
 )
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("-fsanitize=address" COMPILER_SUPPORTS_ADDRESS_SANITIZER)
+if(COMPILER_SUPPORTS_ADDRESS_SANITIZER AND CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -fsanitize=address")
 endif()
 target_link_libraries(blocks PUBLIC SDL3::SDL3)
